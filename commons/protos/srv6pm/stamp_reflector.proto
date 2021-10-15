@@ -1,0 +1,227 @@
+/*
+##########################################################################
+# Copyright (C) 2021 Carmine Scarpitta - (University of Rome "Tor Vergata")
+# www.uniroma2.it/netgroup
+#
+#
+# Licensed under the Apache License, Version 2.0 (the 'License');
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Protobuf definitions used to implement a STAMP Reflector for SRv6 PM Project
+#
+# @author Carmine Scarpitta <carmine.scarpitta@uniroma2.it>
+#
+*/
+
+
+/* This file contains several definitions useful to implement a STAMP Reflector
+for SRv6 PM Project */
+
+syntax = "proto3";
+
+package srv6pm;
+
+import "common.proto";
+
+// STAMPSessionReflectorService provides RPCs used to control a STAMP Session
+// Reflector
+service STAMPSessionReflectorService {
+
+  // Init: RPC used to initialize the Session Sender
+  rpc Init (InitStampReflectorRequest) returns (InitStampReflectorReply) {}
+
+  // Reset: RPC used to initialize the Session Sender
+  rpc Reset (ResetStampReflectorRequest) returns (ResetStampReflectorReply) {}
+
+  // CreateStampSession: RPC used to create a STAMP Session
+  rpc CreateStampSession (CreateStampReflectorSessionRequest)
+                          returns (CreateStampReflectorSessionReply) {}
+
+  // StartStampSession: RPC used to start a STAMP Session
+  rpc StartStampSession (StartStampReflectorSessionRequest) 
+                         returns (StartStampReflectorSessionReply) {}
+
+  // StopStampSession: RPC used to stop a STAMP Session
+  rpc StopStampSession (StopStampReflectorSessionRequest)
+                        returns (StopStampReflectorSessionReply) {}
+
+  // DestroyStampSession: RPC used to destroy an existing STAMP Session
+  rpc DestroyStampSession (DestroyStampReflectorSessionRequest)
+                           returns (DestroyStampReflectorSessionReply) {}
+
+}
+
+// CreateStampReflectorSessionRequest carries the parameters required to create
+// a new STAMP Session on the Reflector
+message CreateStampReflectorSessionRequest {
+
+  // ssid is the Session Sender Identifier, defined in
+  // draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+  // return_sidlist is the segment list for the return SRv6 Path (i.e. the
+  // path Reflector->Sender)
+  SRv6Path return_sidlist = 2;
+
+  // stamp_params carries the Reflector parameters; this is required to inform
+  // the controller about the values chosen by the Reflector for the optional
+  // arguments
+  StampReflectorParameters stamp_params = 3;
+
+}
+
+// CreateStampReflectorSessionReply carries the arguments returned by the
+// CreateStampReflectorSessionReply RPC
+message CreateStampReflectorSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+  // stamp_params carries the Reflector parameters required by the STAMP
+  // protocol
+  StampReflectorParameters stamp_params = 3;
+
+}
+
+// StampReflectorParameters carries the parameters required by the STAMP
+// Reflector
+message StampReflectorParameters {
+
+  // reflector_udp_port is the port of the Reflector to be used for the STAMP
+  // Session
+  uint32 reflector_udp_port = 1;  // TODO rimuovere?
+
+  // auth_mode is the authentication mode to be used for the STAMP Session
+  // (e.g. UNAUTHENTICATED)
+  AuthenticationMode auth_mode = 2;
+
+  // key_chain is required for the authenticated mode
+  string key_chain = 3;
+
+  // timestamp_format specifies the timestamp format to be used for the STAMP
+  // Session (e.g. NTP or PTPv2)
+  TimestampFormat timestamp_format = 4;
+
+  // session_reflector_mode specifies the session mode to be used for the
+  // Reflector (e.g. STATELESS or STATEFUL)
+  SessionReflectorMode session_reflector_mode = 5;
+
+}
+
+// StartStampReflectorSessionRequest carries the parameters required to start a
+// STAMP Session
+message StartStampReflectorSessionRequest {
+
+  // ssid is the Session Sender Identifier, defined in
+  // draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// InitReflectorRequest carries the parameters required to initialize the
+// STAMP SenderReflector
+message InitStampReflectorRequest {
+
+  // reflector_udp_port is the UDP port on the Reflector used by STAMP
+  uint32 reflector_udp_port = 1;
+
+  // interfaces: List of interfaces on which the Reflector will listen for
+  // STAMP packets
+  repeated string interfaces = 2;
+
+}
+
+// InitStampReflectorReply carries the arguments returned by the Init RPC
+message InitStampReflectorReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// StopStampReflectorSessionRequest carries the parameters required to stop a
+// STAMP Session
+message StopStampReflectorSessionRequest {
+
+  // ssid: the Session Session Identifier of the STAMP Session to stop, defined
+  // in draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// DestroyStampReflectorSessionRequest carries the parameters required to destroy a
+// STAMP Session
+message DestroyStampReflectorSessionRequest {
+
+  // ssid: the Session Session Identifier of the STAMP Session to destroy,
+  // defined in draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// StartStampReflectorSessionReply carries the arguments returned by the StartStampSession RPC
+message StartStampReflectorSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// StopStampReflectorSessionReply carries the arguments returned by the StopStampSession
+// RPC
+message StopStampReflectorSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// DestroyStampReflectorSessionReply carries the arguments returned by the
+// DestroyStampSession RPC
+message DestroyStampReflectorSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// ResetStampReflectorRequest carries the arguments required to reset a STAMP node
+message ResetStampReflectorRequest {
+
+}
+
+// ResetStampReflectorReply carries the arguments returned by the
+// Reset RPC
+message ResetStampReflectorReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}

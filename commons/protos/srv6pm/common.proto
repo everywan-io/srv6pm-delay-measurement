@@ -1,0 +1,173 @@
+/*
+##########################################################################
+# Copyright (C) 2021 Carmine Scarpitta - (University of Rome "Tor Vergata")
+# www.uniroma2.it/netgroup
+#
+#
+# Licensed under the Apache License, Version 2.0 (the 'License');
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Protobuf definitions used by STAMP Sender and STAMP Reflector in SRv6 PM
+# Project
+#
+# @author Carmine Scarpitta <carmine.scarpitta@uniroma2.it>
+#
+*/
+
+
+/* This file contains the definition of several messages used by the STAMP
+Sender and STAMP Reflector */
+
+syntax = "proto3";
+
+package srv6pm;
+
+// AuthenticationMode: an enum containing the authentication modes
+enum AuthenticationMode {
+
+  // AUTHENTICATION_MODE_UNSPECIFIED is used to indicate that
+  // AuthenticationMode field has not been set
+  AUTHENTICATION_MODE_UNSPECIFIED = 0;
+
+  // AUTHENTICATION_MODE_UNAUTHENTICATED: run STAMP in unauthenticated mode
+  AUTHENTICATION_MODE_UNAUTHENTICATED = 1;
+
+  // AUTHENTICATION_MODE_HMAC_SHA_256: use HMAC SHA 256 as authentication mode
+  AUTHENTICATION_MODE_HMAC_SHA_256 = 2;
+
+}
+
+// TimestampFormat: an enum containing the supported timestamp formats
+enum TimestampFormat {
+
+  // TIMESTAMP_FORMAT_UNSPECIFIED is used to indicate that TimestampFormat
+  // field has not been set
+  TIMESTAMP_FORMAT_UNSPECIFIED = 0;
+
+  // TIMESTAMP_FORMAT_PTPv2: PTPv2 timestamp format
+  TIMESTAMP_FORMAT_PTPv2 = 1;
+
+  // TIMESTAMP_FORMAT_NTP: NTP timestamp format
+  TIMESTAMP_FORMAT_NTP = 2;
+
+}
+
+// PacketLossType: an enum containing the supported packet loss types
+enum PacketLossType {
+
+  // PACKET_LOSS_TYPE_UNSPECIFIED is used to indicate that
+  // PacketLossType field has not been set
+  PACKET_LOSS_TYPE_UNSPECIFIED = 0;
+
+  // PACKET_LOSS_TYPE_ROUND_TRIP: Round Trip packet loss type
+  PACKET_LOSS_TYPE_ROUND_TRIP = 1;
+
+  // PACKET_LOSS_TYPE_NEAR_END: Near End packet loss type
+  PACKET_LOSS_TYPE_NEAR_END = 2;
+
+  // PACKET_LOSS_TYPE_FAR_END: Far End packet loss type
+  PACKET_LOSS_TYPE_FAR_END = 3;
+
+}
+
+// DelayMeasurementMode: an enum containing the supported delay measurement
+// modes
+enum DelayMeasurementMode {
+
+  // DELAY_MEASUREMENT_MODE_UNSPECIFIED is used to indicate that
+  // DelayMeasurementMode field has not been set
+  DELAY_MEASUREMENT_MODE_UNSPECIFIED = 0;
+
+  // DELAY_MEASUREMENT_MODE_ONE_WAY: One-Way Measurement Mode
+  DELAY_MEASUREMENT_MODE_ONE_WAY = 1;
+
+  // DELAY_MEASUREMENT_MODE_TWO_WAY: Two-Way Measurement Mode
+  DELAY_MEASUREMENT_MODE_TWO_WAY = 2;
+
+  // DELAY_MEASUREMENT_MODE_LOOPBACK: Loopback Measurement Mode
+  DELAY_MEASUREMENT_MODE_LOOPBACK = 3;
+
+}
+
+// SessionReflectorMode: an enum containing the supported Reflector modes
+enum SessionReflectorMode {
+
+  // SESSION_REFLECTOR_MODE_UNSPECIFIED is used to indicate that
+  // SessionReflectorMode field has not been set
+  SESSION_REFLECTOR_MODE_UNSPECIFIED = 0;
+
+  // SESSION_REFLECTOR_MODE_STATELESS: Reflector in Stateless mode
+  SESSION_REFLECTOR_MODE_STATELESS = 1;
+
+  // SESSION_REFLECTOR_MODE_STATEFUL: Reflector in Stateful mode
+  SESSION_REFLECTOR_MODE_STATEFUL = 2;
+
+}
+
+// SRv6Path: represents a SRv6 Path
+message SRv6Path {
+
+  // segments: List of segments making the SRv6 Path
+  repeated string segments = 1;
+
+}
+
+// StatusCode is used to report the status code of an operation
+enum StatusCode {
+
+  // STATUS_CODE_UNSPECIFIED is used to indicate that StatusCode field has not
+  // been specified
+  STATUS_CODE_UNSPECIFIED = 0;
+
+  // STATUS_CODE_SUCCESS is used to indicate that an operation is successfully
+  STATUS_CODE_SUCCESS = 1;
+
+  // STATUS_CODE_SESSION_NOT_FOUND is used to indicate that an entity does not
+  // exist
+  STATUS_CODE_SESSION_NOT_FOUND = 2;
+
+  // STATUS_CODE_SESSION_EXISTS is used to indicate that a STAMP Session
+  // already exists
+  STATUS_CODE_SESSION_EXISTS = 3;
+
+  // STATUS_CODE_INVALID_ARGUMENT is used to indicate that an invalid argument
+  // has been provided
+  STATUS_CODE_INVALID_ARGUMENT = 4;
+
+  // STATUS_CODE_SESSION_RUNNING is used to indicate that a STAMP Session is
+  // running
+  STATUS_CODE_SESSION_RUNNING = 5;
+
+  // STATUS_CODE_SESSION_NOT_RUNNING is used to indicate that a STAMP Session
+  // is not running
+  STATUS_CODE_SESSION_NOT_RUNNING = 6;
+
+  // STATUS_CODE_NOT_INITIALIZED is used to indicate that the node is in
+  // uninitialized state
+  STATUS_CODE_NOT_INITIALIZED = 7;
+
+  // STATUS_CODE_ALREADY_INITIALIZED is used to indicate that the node has been
+  // already initialized
+  STATUS_CODE_ALREADY_INITIALIZED = 8;
+
+  // STATUS_CODE_RESET_FAILED is used to indicate that an error occurred during
+  // a Reset operation
+  STATUS_CODE_RESET_FAILED = 9;
+
+  // STATUS_CODE_INTERNAL_ERROR is used to indicate that an internal error
+  // occurred
+  STATUS_CODE_INTERNAL_ERROR = 10;
+
+}
+
+
+// TODO Aggiungere al proto init e reset

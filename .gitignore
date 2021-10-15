@@ -1,0 +1,4 @@
+.protolint.yaml
+.venv/
+.vscode/
+__pycache__/

@@ -1,0 +1,288 @@
+/*
+##########################################################################
+# Copyright (C) 2021 Carmine Scarpitta - (University of Rome "Tor Vergata")
+# www.uniroma2.it/netgroup
+#
+#
+# Licensed under the Apache License, Version 2.0 (the 'License');
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Protobuf definitions used to implement a STAMP Sender for SRv6 PM Project
+#
+# @author Carmine Scarpitta <carmine.scarpitta@uniroma2.it>
+#
+*/
+
+
+/* This file contains several definitions useful to implement a STAMP Sender
+for SRv6 PM Project */
+
+syntax = "proto3";
+
+package srv6pm;
+
+import "common.proto";
+
+// STAMPSessionSenderService provides RPCs used to control a STAMP Session
+// Sender
+service STAMPSessionSenderService {
+
+  // Init: RPC used to initialize the Session Sender
+  rpc Init (InitStampSenderRequest) returns (InitStampSenderReply) {}
+
+  // Reset: RPC used to initialize the Session Sender
+  rpc Reset (ResetStampSenderRequest) returns (ResetStampSenderReply) {}
+
+  // CreateStampSession: RPC used to create a STAMP Session
+  rpc CreateStampSession (CreateStampSenderSessionRequest)
+                          returns (CreateStampSenderSessionReply) {}
+
+  // StartStampSession: RPC used to start a STAMP Session
+  rpc StartStampSession (StartStampSenderSessionRequest)
+                         returns (StartStampSenderSessionReply) {}
+
+  // StopStampSession: RPC used to stop a STAMP Session
+  rpc StopStampSession (StopStampSenderSessionRequest)
+                        returns (StopStampSenderSessionReply) {}
+
+  // GetStampSessionResults: Return the results for a given STAMP Session
+  rpc GetStampSessionResults (GetStampSessionResultsRequest)
+                              returns (StampResults) {}
+
+  // DestroyStampSession: RPC used to destroy an existing STAMP Session
+  rpc DestroyStampSession (DestroyStampSenderSessionRequest)
+                           returns (DestroyStampSenderSessionReply) {}
+
+}
+
+// CreateStampSenderSessionRequest carries the parameters required to create a
+// STAMP Session
+message CreateStampSenderSessionRequest {
+
+  // ssid is the Session Sender Identifier, defined in
+  // draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+  // sidlist is the segment list for the direct SRv6 path (i.e. the path
+  // Sender->Reflector)
+  SRv6Path sidlist = 2;
+
+  // interval: time (in seconds) between two packets
+  uint32 interval = 3;
+
+  // stamp_params carries the Sender parameters; this is required to inform
+  // the controller about the values chosen by the Reflector for the optional
+  // arguments
+  StampSenderParameters stamp_params = 4;
+
+}
+
+// CreateStampSenderSessionReply carries the arguments returned by the
+// CreateStampSenderSession RPC
+message CreateStampSenderSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+  // stamp_params carries the Sender parameters required by the STAMP protocol
+  StampSenderParameters stamp_params = 3;
+
+}
+
+// StartStampSenderSessionRequest carries the parameters required to start a
+// STAMP Session
+message StartStampSenderSessionRequest {
+
+  // ssid is the Session Sender Identifier, defined in
+  // draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// StampSenderParameters carries the parameters required by the STAMP Sender
+message StampSenderParameters {
+
+  // reflector_ip is the IP address of the Reflector to be used for the STAMP
+  // Session
+  string reflector_ip = 2;
+
+  // reflector_udp_port is the port of the Reflector to be used for the STAMP
+  // Session
+  uint32 reflector_udp_port = 3;
+
+  // auth_mode is the authentication mode to be used for the STAMP Session
+  // (e.g. UNAUTHENTICATED)
+  AuthenticationMode auth_mode = 4;
+
+  // key_chain is required for the authenticated mode
+  string key_chain = 5;
+
+  // timestamp_format specifies the timestamp format to be used for the STAMP
+  // Session (e.g. NTP or PTPv2)
+  TimestampFormat timestamp_format = 6;
+ 
+  // packet_loss_type specifies the type of packet loss measurement to be
+  // performed (e.g. ROUND_TRIP, NEAR_END, FAR_END)
+  PacketLossType packet_loss_type= 7;
+
+  // delay_measurement_mode specifies the delay measurement mode to be used for
+  // the STAMP session (e.g. ONE_WAY, TWO_WAY, LOOPBACK)
+  DelayMeasurementMode delay_measurement_mode = 8;
+
+}
+
+// InitStampSenderRequest carries the parameters required to initialize the STAMP
+// Sender
+message InitStampSenderRequest {
+
+  // sender_udp_port is the UDP port on the Sender used by STAMP
+  uint32 sender_udp_port = 1;
+
+  // interfaces: List of interfaces on which the Sender will listen for
+  // STAMP packets
+  repeated string interfaces = 2;
+
+}
+
+// InitStampSenderReply carries the arguments returned by the Init RPC
+message InitStampSenderReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// StopStampSenderSessionRequest carries the parameters required to stop a
+// STAMP Session
+message StopStampSenderSessionRequest {
+
+  // ssid: the Session Session Identifier of the STAMP Session to stop, defined
+  // in draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// DestroyStampSenderSessionRequest carries the parameters required to destroy a
+// STAMP Session
+message DestroyStampSenderSessionRequest {
+
+  // ssid: the Session Session Identifier of the STAMP Session to destroy,
+  // defined in draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// StartStampSenderSessionReply carries the arguments returned by the StartStampSession RPC
+message StartStampSenderSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// StopStampSenderSessionReply carries the arguments returned by the StopStampSession
+// RPC
+message StopStampSenderSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// DestroyStampSenderSessionReply carries the arguments returned by the
+// DestroyStampSession RPC
+message DestroyStampSenderSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// GetStampSessionResultsRequest carries the arguments required by the
+// GetStampSessionResults RPC
+message GetStampSessionResultsRequest {
+
+  // ssid: the Session Session Identifier of the STAMP Session to get resutls
+  //for, defined in draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// StampResults reports the results of a single STAMP Session
+message StampResults {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+  // results contain the results data
+  repeated StampSessionResult results = 3;
+
+}
+
+// StampSessionResult reports the results of a single STAMP Session
+message StampSessionResult {
+
+  // ssid: Session Session Identifier
+  uint32 ssid = 1;
+
+  // test_pkt_tx_timestamp: STAMP Test packet transmission timestamp (taken on
+  // Sender)
+  double test_pkt_tx_timestamp = 2;
+
+  // reply_pkt_tx_timestamp: STAMP Test Reply packet transmission timestamp
+  // (taken on Reflector)
+  double reply_pkt_tx_timestamp = 3;
+
+  // reply_pkt_rx_timestamp: STAMP Test Reply packet receive timestamp (taken
+  // on Sender)
+  double reply_pkt_rx_timestamp = 4;
+
+  // test_pkt_rx_timestamp: STAMP Test packet receive timestamp (taken on
+  // Reflector)
+  double test_pkt_rx_timestamp = 5;
+
+}
+
+// ResetStampSenderRequest carries the arguments required to reset a STAMP node
+message ResetStampSenderRequest {
+
+}
+
+// ResetStampSenderReply carries the arguments returned by the
+// Reset RPC
+message ResetStampSenderReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
