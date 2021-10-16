@@ -77,6 +77,12 @@ message CreateStampReflectorSessionRequest {
   // arguments
   StampReflectorParameters stamp_params = 3;
 
+  // stamp_source_ipv6_address: IPv6 address to be used as source IPv6 address
+  // of the STAMP Reply packets. This argument should be optional; if it is
+  // not provided, the stamp_source_ipv6_address value specified in the Init()
+  // RPC will be used as source IPv6 address of the STAMP packets.
+  string stamp_source_ipv6_address = 4;
+
 }
 
 // CreateStampReflectorSessionReply carries the arguments returned by the
@@ -140,6 +146,12 @@ message InitStampReflectorRequest {
   // interfaces: List of interfaces on which the Reflector will listen for
   // STAMP packets
   repeated string interfaces = 2;
+
+  // stamp_source_ipv6_address: IPv6 address to be used as source IPv6 address
+  // for the STAMP Reply packets; this setting can be overrided for a specific 
+  // STAMP session by setting the stamp_source_ipv6_address parameter in the
+  // CreateStampSession()
+  string stamp_source_ipv6_address = 3;
 
 }
 

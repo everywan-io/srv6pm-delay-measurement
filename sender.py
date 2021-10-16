@@ -103,6 +103,11 @@ class STAMPSessionSenderServicer(
         self.stamp_interfaces = None
         # Is sender initialized?
         self.is_initialized = False
+        # IP address to be used as source IPv6 address of the STAMP Test
+        # packets. This parameter can be overridden by setting the
+        # stamp_source_ipv6_address attribute in the STAMPSession
+        # If it is None, the loopback IPv6 address will be used.
+        self.stamp_source_ipv6_address = None
 
     def is_session_valid(self, ssid):
         """
@@ -275,12 +280,31 @@ class STAMPSessionSenderServicer(
         sender_udp_port = self.sender_udp_port
         stop_flag = stamp_session.stop_flag
 
-        # Get an IPv6 address of the interface and use it to send the STAMP
-        # packets; if no interface has been provided, we use the loopback IP
-        interface = self.stamp_interfaces[0] if self.stamp_interfaces is not None and len(
-            self.stamp_interfaces) > 0 else 'lo'  # TODO quale interfaccia scegliere?
-        addrs = netifaces.ifaddresses(interface)
-        ipv6_addr = addrs[netifaces.AF_INET6][0]['addr']
+        # Get an IPv6 address to be used as source IPv6 address for the STAMP
+        # packet.
+        #
+        # We support three methods (listed in order of preference):
+        #    * stamp_source_ipv6_address specific for this STAMP Session
+        #    * global stamp_source_ipv6_address
+        #    * IPv6 address of the loopback interface
+        #
+        # We use the specific stamp_source_ipv6_address; if it is None, we use
+        # the global stamp_source_ipv6_address; if it is None, we use the IPv6
+        # address of the loopback interface
+        logger.debug('Getting a valid STAMP Source IPv6 Address')
+        if stamp_session.stamp_source_ipv6_address is not None:
+            ipv6_addr = stamp_session.stamp_source_ipv6_address
+            logger.debug('Using the STAMP Session specific IPv6 '
+                         'address: {ipv6_addr}'.format(ipv6_addr=ipv6_addr))
+        elif self.stamp_source_ipv6_address is not None:
+            ipv6_addr = self.stamp_source_ipv6_address
+            logger.debug('Using the STAMP Session global IPv6 '
+                         'address: {ipv6_addr}'.format(ipv6_addr=ipv6_addr))
+        else:
+            loopback_iface = netifaces.ifaddresses('lo')
+            ipv6_addr = loopback_iface[netifaces.AF_INET6][0]['addr']
+            logger.debug('Using the loopback IPv6 address: {ipv6_addr}'
+                         .format(ipv6_addr=ipv6_addr))
 
         # Start sending loop
         while not stop_flag.is_set():
@@ -409,6 +433,12 @@ class STAMPSessionSenderServicer(
             # One or more interfaces provided in the gRPC message
             self.stamp_interfaces = list(request.interfaces)
 
+        # Extract STAMP Source IPv6 address from the request message
+        # This parameter is optional, therefore we leave it to None if it is
+        # not provided
+        if request.stamp_source_ipv6_address:
+            self.stamp_source_ipv6_address = request.stamp_source_ipv6_address
+
         # Open a Scapy socket (L3PacketSocket) for sending and receiving STAMP
         # packets; under the hood, L3PacketSocket uses a AF_PACKET socket
         logger.debug('Creating a new sender socket')
@@ -523,6 +553,13 @@ class STAMPSessionSenderServicer(
                 description='A session with SSID {ssid} already exists'
                             .format(ssid=request.ssid))
 
+        # Extract STAMP Source IPv6 address from the request message
+        # This parameter is optional, therefore we set it to None if it is
+        # not provided
+        stamp_source_ipv6_address = None
+        if request.stamp_source_ipv6_address:
+            stamp_source_ipv6_address = request.stamp_source_ipv6_address
+
         # Parse optional parameters
         # If an optional parameter has not been set, we use the default value
         auth_mode = grpc_to_py_resolve_defaults(
@@ -561,7 +598,8 @@ class STAMPSessionSenderServicer(
             timestamp_format=timestamp_format,
             packet_loss_type=packet_loss_type,
             delay_measurement_mode=delay_measurement_mode,
-            stop_flag=Event()  # To support stopping the sending thread
+            stop_flag=Event(),  # To support stopping the sending thread
+            stamp_source_ipv6_address=stamp_source_ipv6_address
         )
         logger.info('STAMP Session initialized: SSID %d', request.ssid)
 

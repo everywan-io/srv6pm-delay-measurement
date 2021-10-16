@@ -485,6 +485,10 @@ class STAMPSession:
         An 32-bit integer that represents the STAMP Sequence Number.
     is_running : bool
         Define whether the STAMP Session is running or not.
+    stamp_source_ipv6_address : str
+        IP address to be used as source IPv6 address of the STAMP packets.
+         If it is None, the global IPv6 address will be used as source
+         IPv6 address.
 
     Methods
     -------
@@ -494,7 +498,8 @@ class STAMPSession:
         Mark the STAMP Session as NOT running.
     """
 
-    def __init__(self, ssid, auth_mode, key_chain, timestamp_format):
+    def __init__(self, ssid, auth_mode, key_chain, timestamp_format,
+                 stamp_source_ipv6_address=None):
         """
         Constructs all the necessary attributes for the STAMP Session object.
 
@@ -508,6 +513,10 @@ class STAMPSession:
             Key chain used for the Authenticated Mode.
         timestamp_format : utils.TimestampFormat
             Format of the timestamp (i.e. NTP or PTPv2).
+        stamp_source_ipv6_address : str, optional
+            IP address to be used as source IPv6 address of the STAMP packets.
+             If it is None, the global IPv6 address will be used as source
+             IPv6 address (default: None).
         """
 
         # STAMP Session Identifier
@@ -522,6 +531,8 @@ class STAMPSession:
         self.sequence_number = 0
         # Flag set if the STAMP Session is running
         self.is_running = False
+        # IP address to be used as source IPv6 address of the STAMP packets
+        self.stamp_source_ipv6_address = stamp_source_ipv6_address
 
     def set_started(self):
         """
@@ -582,6 +593,10 @@ class STAMPSenderSession(STAMPSession):
         An 32-bit integer that represents the STAMP Sequence Number.
     is_running : bool
         Define whether the STAMP Session is running or not.
+    stamp_source_ipv6_address : str
+        IP address to be used as source IPv6 address of the STAMP packets.
+         If it is None, the global IPv6 address will be used as source
+         IPv6 address.
 
     Methods
     -------
@@ -594,7 +609,8 @@ class STAMPSenderSession(STAMPSession):
 
     def __init__(self, ssid, reflector_ip, reflector_udp_port,
                  sidlist, auth_mode, key_chain, timestamp_format,
-                 packet_loss_type, delay_measurement_mode, stop_flag=None):
+                 packet_loss_type, delay_measurement_mode, stop_flag=None,
+                 stamp_source_ipv6_address=None):
         """
         Constructs all the necessary attributes for the STAMP Session object.
 
@@ -620,10 +636,15 @@ class STAMPSenderSession(STAMPSession):
             Delay Measurement Mode (i.e. One-Way, Two-Way or Loopback).
         stop_flag : threading.Event
             A threading event used to stop the STAMP Session.
+        stamp_source_ipv6_address : str, optional
+            IP address to be used as source IPv6 address of the STAMP packets.
+             If it is None, the global IPv6 address will be used as source
+             IPv6 address (default: None).
         """
 
         # Initialize super class STAMPSession
-        super().__init__(ssid, auth_mode, key_chain, timestamp_format)
+        super().__init__(ssid, auth_mode, key_chain, timestamp_format,
+                         stamp_source_ipv6_address)
         # IP address of the STAMP Session Reflector
         self.reflector_ip = reflector_ip
         # UDP port of STAMP Session Reflector
@@ -768,13 +789,18 @@ class STAMPReflectorSession(STAMPSession):
         An 32-bit integer that represents the STAMP Sequence Number.
     is_running : bool
         Define whether the STAMP Session is running or not.
+    stamp_source_ipv6_address : str
+        IP address to be used as source IPv6 address of the STAMP packets.
+         If it is None, the global IPv6 address will be used as source
+         IPv6 address.
 
     Methods
     -------
     """
 
     def __init__(self, ssid, reflector_udp_port, return_sidlist, auth_mode,
-                 key_chain, timestamp_format, session_reflector_mode):
+                 key_chain, timestamp_format, session_reflector_mode,
+                 stamp_source_ipv6_address=None):
         """
         Constructs all the necessary attributes for the STAMP Session object.
 
@@ -794,10 +820,15 @@ class STAMPReflectorSession(STAMPSession):
             Format of the timestamp (i.e. NTP or PTPv2).
         session_reflector_mode : utils.SessionReflectorMode
             Mode used by the STAMP Reflector (i.e. Stateless or Stateful).
+        stamp_source_ipv6_address : str, optional
+            IP address to be used as source IPv6 address of the STAMP packets.
+             If it is None, the global IPv6 address will be used as source
+             IPv6 address (default: None).
         """
 
         # Initialize super class STAMP Session
-        super().__init__(ssid, auth_mode, key_chain, timestamp_format)
+        super().__init__(ssid, auth_mode, key_chain, timestamp_format,
+                         stamp_source_ipv6_address)
         # UDP port of the STAMP Session Reflector
         self.reflector_udp_port = reflector_udp_port
         # Mode used by the STAMP Reflector (i.e. Stateless or Stateful)

@@ -84,6 +84,12 @@ message CreateStampSenderSessionRequest {
   // arguments
   StampSenderParameters stamp_params = 4;
 
+  // stamp_source_ipv6_address: IPv6 address to be used as source IPv6 address
+  // of the STAMP Test packets. This argument should be optional; if it is not
+  // provided, the stamp_source_ipv6_address value specified in the Init() RPC
+  // will be used as source IPv6 address of the STAMP packets.
+  string stamp_source_ipv6_address = 5;
+
 }
 
 // CreateStampSenderSessionReply carries the arguments returned by the
@@ -153,6 +159,12 @@ message InitStampSenderRequest {
   // interfaces: List of interfaces on which the Sender will listen for
   // STAMP packets
   repeated string interfaces = 2;
+
+  // stamp_source_ipv6_address: IPv6 address to be used as source IPv6 address
+  // for the STAMP Test packets; this setting can be overrided for a specific
+  // STAMP session by setting the stamp_source_ipv6_address parameter in the
+  // CreateStampSession()
+  string stamp_source_ipv6_address = 5;
 
 }
 
