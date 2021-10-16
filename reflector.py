@@ -42,10 +42,14 @@ import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 
 from scapy.arch.linux import L3PacketSocket
-from scapy.layers.inet import UDP
 from scapy.sendrecv import AsyncSniffer
 
 from utils import (
+    NEXT_HEADER_IPV6_FIELD,
+    NEXT_HEADER_SRH_FIELD,
+    ROUTING_HEADER_PROTOCOL_NUMBER,
+    UDP_DEST_PORT_FIELD,
+    UDP_PROTOCOL_NUMBER,
     STAMPReflectorSession,
     AuthenticationMode,
     TimestampFormat,
@@ -207,11 +211,6 @@ class STAMPSessionReflectorServicer(
         None.
         """
 
-        # If the packet is not an UDP packet or destination port is not the
-        # STAMP port, don't process anymore
-        if UDP not in packet or packet[UDP].dport != self.reflector_udp_port:
-            return
-
         logger.debug('STAMP Test packet received: \n\n%s',
                      packet.show(dump=True))
 
@@ -292,11 +291,27 @@ class STAMPSessionReflectorServicer(
             Return an AsyncSniffer.
         """
 
+        # Build a BPF filter expression to filter STAMP packets received
+        stamp_filter = (
+            '{next_header_ipv6_field} == {routing_header_protocol_number} && '
+            '{next_header_srh_field} == {udp_protocol_number} && '
+            '{udp_dest_port_field} == {stamp_port}'.format(
+                next_header_ipv6_field=NEXT_HEADER_IPV6_FIELD,
+                routing_header_protocol_number=ROUTING_HEADER_PROTOCOL_NUMBER,
+                next_header_srh_field=NEXT_HEADER_SRH_FIELD,
+                udp_protocol_number=UDP_PROTOCOL_NUMBER,
+                udp_dest_port_field=UDP_DEST_PORT_FIELD,
+                stamp_port=self.reflector_udp_port)
+        )
+
+        logging.debug('Creating AsyncSniffer, iface: {iface}, '
+                      'filter: {filter}'.format(
+                          iface=self.stamp_interfaces, filter=stamp_filter))
+
         # Create and return an AsyncSniffer
         sniffer = AsyncSniffer(
             iface=self.stamp_interfaces,
-            opened_socket=self.reflector_socket,
-            filter='ip6',
+            filter=stamp_filter,
             prn=self.stamp_test_packet_received)
         return sniffer
 

@@ -36,6 +36,54 @@ import common_pb2
 MAX_SEQUENCE_NUMBER = 2**32 - 1
 
 
+# Constants related to the STAMP packets
+
+# Offset of the Next Header field of the IPv6 header relative to the IPv6
+# packet
+NEXT_HEADER_IPV6_OFFSET = 6
+
+# Protocol Number associated to "Routing Header for IPv6"
+ROUTING_HEADER_PROTOCOL_NUMBER = 43
+
+# Offset of the SRH relative to the IPv6 packet for our STAMP packets
+SRH_OFFSET = 40
+
+# Offset of the Next Header field of the SRv6 header (SRH) relative to the SRH
+NEXT_HEADER_SRH_OFFSET = 0
+
+# UDP protocol number
+UDP_PROTOCOL_NUMBER = 17
+
+# Offset of the Header Extension Length field in the SRv6 Header (SRH)
+# relative to the SRH
+HDR_EXT_LEN_SRH_OFFSET = 1
+
+# Offset of the UDP Destination Port field relative to the UDP Header
+UDP_DEST_PORT_OFFSET = 2
+
+# Size (in bytes) of the UDP Destination Port field
+UDP_DEST_PORT_LENGTH = 2
+
+# Next Header value of the IPv6 header
+NEXT_HEADER_IPV6_FIELD = 'ip6[%d]' % NEXT_HEADER_IPV6_OFFSET
+
+# Next Header value of the SRv6 Header
+NEXT_HEADER_SRH_FIELD = 'ip6[%d]' % (SRH_OFFSET + NEXT_HEADER_SRH_OFFSET)
+
+# Header Extension Length value of the SRv6 Header
+HDR_EXT_LEN_SRH_FIELD = 'ip6[%d]' % (SRH_OFFSET + HDR_EXT_LEN_SRH_OFFSET)
+
+# Length of the SRv6 Header
+SRH_LENGTH = '8 + ' + HDR_EXT_LEN_SRH_FIELD + '* 8'
+
+# Offset of the UDP Header relative to the IPv6+SRH packet
+UDP_HEADER_OFFSET = str(SRH_OFFSET) + SRH_LENGTH
+
+# UDP Destination Port value
+UDP_DEST_PORT_FIELD = 'ip6[%d + %s + %d : %d]' % (
+    SRH_OFFSET, SRH_LENGTH, UDP_DEST_PORT_OFFSET, UDP_DEST_PORT_LENGTH)
+
+
 # Enum used by STAMP Sender and STAMP Reflector
 
 class AuthenticationMode(enum.Enum):
