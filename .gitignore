@@ -2,3 +2,4 @@
 .venv/
 .vscode/
 __pycache__/
+commons/protos/srv6pm/gen-py/
