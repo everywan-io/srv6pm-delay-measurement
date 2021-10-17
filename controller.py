@@ -1560,7 +1560,7 @@ class Controller:
         Parameters
         ----------
         ssid : int
-            The 16-bit STAMP Session Identifier (SSID)
+            The 16-bit STAMP Session Identifier (SSID).
 
         Returns
         -------
@@ -1625,14 +1625,18 @@ class Controller:
                         stamp_session.stamp_session_return_path_results.mean_delay)
             logger.debug('*********\n')
 
-    def get_stamp_results(self, ssid):
+    def get_stamp_results(self, ssid, collect_results_from_stamp=False):
         """
         Return the results stored in the controller.
 
         Parameters
         ----------
         ssid : int
-            The 16-bit STAMP Session Identifier (SSID)
+            The 16-bit STAMP Session Identifier (SSID).
+        collect_results_from_stamp : bool, optional
+            Whether to collect the new results from the STAMP Sender. If 
+            False, only the results already stored in the controller inventory
+            are returned (default: False).
 
         Returns
         -------
@@ -1648,18 +1652,26 @@ class Controller:
             logger.error('Session %d does not exist', ssid)
             raise STAMPSessionNotFoundError(ssid)
 
+        # Eventually, collect new results from the STAMP Sender
+        if collect_results_from_stamp:
+            self.collect_stamp_results(ssid)
+
         # Return the mean delay
         return (stamp_session.stamp_session_direct_path_results.mean_delay, 
                 stamp_session.stamp_session_return_path_results.mean_delay)
 
-    def print_stamp_results(self, ssid):
+    def print_stamp_results(self, ssid, collect_results_from_stamp):
         """
         Print the results stored in the controller.
 
         Parameters
         ----------
         ssid : int
-            The 16-bit STAMP Session Identifier (SSID)
+            The 16-bit STAMP Session Identifier (SSID).
+        collect_results_from_stamp : bool, optional
+            Whether to collect the new results from the STAMP Sender. If 
+            False, only the results already stored in the controller inventory
+            are returned (default: False).
 
         Returns
         -------
@@ -1668,7 +1680,7 @@ class Controller:
 
         # Get results from the controller inventory
         mean_delay_direct_path, mean_delay_return_path = \
-            self.get_stamp_results(ssid)
+            self.get_stamp_results(ssid, collect_results_from_stamp)
 
         # Print results
         print()
