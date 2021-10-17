@@ -32,6 +32,7 @@ import logging
 import grpc
 
 import common_pb2
+from exceptions import NodeIdAlreadyExistsError
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
@@ -633,6 +634,8 @@ class Controller:
         """
         Add a STAMP Sender to the Controller inventory.
 
+        Parameters
+        ----------
         node_id : str
             An identifier to identify the STAMP Sender
         udp_port : int, optional
@@ -642,14 +645,21 @@ class Controller:
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
+
+        Raises
+        ------
+        NodeIdAlreadyExistsError
+            If `node_id` is already used.
         """
 
+        # Check if node_id is already taken
+        if self.stamp_nodes.get(node_id, None) is not None:
+            raise NodeIdAlreadyExistsError
         # Create a STAMP Sender object and store it
         node = STAMPSender(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
             udp_port=udp_port, interfaces=interfaces)
         self.stamp_nodes[node_id] = node
-        # TODO gestire caso in cui il nodo esiste
 
     def add_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip, udp_port,
                             interfaces=None):
@@ -664,14 +674,21 @@ class Controller:
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
+
+        Raises
+        ------
+        NodeIdAlreadyExistsError
+            If `node_id` is already used.
         """
 
+        # Check if node_id is already taken
+        if self.stamp_nodes.get(node_id, None) is not None:
+            raise NodeIdAlreadyExistsError
         # Create a STAMP Sender object and store it
         node = STAMPReflector(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
             udp_port=udp_port, interfaces=interfaces)
         self.stamp_nodes[node_id] = node
-        # TODO gestire caso in cui il nodo esiste
 
     def init_sender(self, node_id):
         """
