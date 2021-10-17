@@ -1094,13 +1094,12 @@ class Controller:
         """
 
         # Create a request message
-        request = stamp_sender_pb2.CreateStampSenderSessionRequest()  # TODO
+        request = stamp_sender_pb2.CreateStampSenderSessionRequest()
 
         # Fill the request message
         request.ssid = ssid
         request.sidlist.segments.extend(sidlist)
         request.interval = interval
-        # request.stamp_params.sender_udp_port = sender.udp_port  # TODO togliere?
         request.stamp_params.reflector_ip = reflector.ip
         request.stamp_params.reflector_udp_port = reflector.udp_port
 
