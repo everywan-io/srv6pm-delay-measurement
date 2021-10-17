@@ -37,6 +37,7 @@ import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
+from utils import AuthenticationMode
 
 # Configure logging
 logging.basicConfig(
@@ -1102,21 +1103,18 @@ class Controller:
         # request.stamp_params.sender_udp_port = sender.udp_port  # TODO togliere?
         request.stamp_params.reflector_ip = reflector.ip
         request.stamp_params.reflector_udp_port = reflector.udp_port
-        if source_ip is not None:
-            request.stamp_source_ipv6_address = source_ip
 
         # Fill in optional parameters
-
+        if source_ip is not None:
+            request.stamp_source_ipv6_address = source_ip
         if auth_mode is not None:
             request.stamp_params.auth_mode = auth_mode
-
-        # request.stamp_params.key_chain = ...  # Not used in unauth mode
-
+        if key_chain is not None:
+            request.stamp_params.key_chain = key_chain
         if timestamp_format is not None:
             request.stamp_params.timestamp_format = timestamp_format
-
-        # request.stamp_params.packet_loss_type = ...  # Not used for delay
-
+        if packet_loss_type is not None:
+            request.stamp_params.packet_loss_type = packet_loss_type
         if delay_measurement_mode is not None:
             request.stamp_params.delay_measurement_mode = \
                 delay_measurement_mode
@@ -1185,17 +1183,16 @@ class Controller:
         request.ssid = ssid
         request.return_sidlist.segments.extend(return_sidlist)
         request.stamp_params.reflector_udp_port = reflector.udp_port
+
+        # Fill in optional parameters
         if source_ip is not None:
             request.stamp_source_ipv6_address = source_ip
-
         if auth_mode is not None:
             request.stamp_params.auth_mode = auth_mode
-
-        # request.stamp_params.key_chain = ...  # Not used in unauth mode
-
+        if key_chain is not None:
+            request.stamp_params.key_chain = key_chain
         if timestamp_format is not None:
             request.stamp_params.timestamp_format = timestamp_format
-
         if session_reflector_mode is not None:
             request.stamp_params.session_reflector_mode = \
                 session_reflector_mode
