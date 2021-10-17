@@ -1043,7 +1043,8 @@ class Controller:
                                      sidlist=[], interval=10, auth_mode=None,
                                      key_chain=None, timestamp_format=None,
                                      packet_loss_type=None,
-                                     delay_measurement_mode=None):
+                                     delay_measurement_mode=None,
+                                     source_ip=None):
         """
         Internal function used to create a STAMP Session on the STAMP Sender.
          You should not use this function. Instead, you should use
@@ -1081,6 +1082,10 @@ class Controller:
             The delay measurement mode (i.e. One-Way, Two-Way or Loopback).
              If this parameter is None, the delay measurement mode is decided
              by the STAMP node (default None).
+        source_ip : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP 
+            packets. If None, the address stored in the STAMP Node instance
+            will be used as STAMP Source Address (default: None).
 
         Returns
         -------
@@ -1097,6 +1102,8 @@ class Controller:
         # request.stamp_params.sender_udp_port = sender.udp_port  # TODO togliere?
         request.stamp_params.reflector_ip = reflector.ip
         request.stamp_params.reflector_udp_port = reflector.udp_port
+        if source_ip is not None:
+            request.stamp_source_ipv6_address = source_ip
 
         # Fill in optional parameters
 
@@ -1127,7 +1134,8 @@ class Controller:
     def _create_stamp_reflector_session(self, ssid, sender, reflector,
                                         return_sidlist, auth_mode=None,
                                         key_chain=None, timestamp_format=None,
-                                        session_reflector_mode=None):
+                                        session_reflector_mode=None,
+                                        source_ip=None):
         """
         Internal function used to create a STAMP Session on the STAMP
          Reflector. You should not use this function. Instead, you should use
@@ -1160,6 +1168,10 @@ class Controller:
             The session reflector mode (i.e. Stateless or Stateful).
              If this parameter is None, the packet loss type is decided by the
              STAMP node (default None).
+        source_ip : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP 
+            packets. If None, the address stored in the STAMP Node instance
+            will be used as STAMP Source Address (default: None).
 
         Returns
         -------
@@ -1173,6 +1185,8 @@ class Controller:
         request.ssid = ssid
         request.return_sidlist.segments.extend(return_sidlist)
         request.stamp_params.reflector_udp_port = reflector.udp_port
+        if source_ip is not None:
+            request.stamp_source_ipv6_address = source_ip
 
         if auth_mode is not None:
             request.stamp_params.auth_mode = auth_mode
@@ -1202,7 +1216,9 @@ class Controller:
                              packet_loss_type=None,
                              delay_measurement_mode=None,
                              session_reflector_mode=None,
-                             store_individual_delays=False):
+                             store_individual_delays=False,
+                             sender_source_ip=None,
+                             reflector_source_ip=None):
         """
         Allocate a new SSID and create a STAMP Session (the Sender and the
          Reflector are informed about the new Session).
@@ -1253,6 +1269,16 @@ class Controller:
         store_individual_delays : bool, optional
             Define whether to store the individual delay values or not
              (default: False).
+        sender_source_ip : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP 
+            packets sent by the Sender. If None, the address stored in the
+            STAMP Sender instance will be used as STAMP Source Address 
+            (default: None).
+        reflector_source_ip : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP 
+            packets sent by the Reflector. If None, the address stored in the
+            STAMP Reflector instance will be used as STAMP Source Address 
+            (default: None).
 
         Returns
         -------
@@ -1339,12 +1365,12 @@ class Controller:
 
         # Create STAMP Session on the Sender
         sender_reply = self._create_stamp_sender_session(
-            ssid, sender, reflector, sidlist, interval)
+            ssid, sender, reflector, sidlist, interval, sender_source_ip)
 
         # Create STAMP Session on the Reflector
         if reflector is not None:
             reflector_reply = self._create_stamp_reflector_session(
-                ssid, sender, reflector, return_sidlist)
+                ssid, sender, reflector, return_sidlist, reflector_source_ip)
 
         # Extract the STAMP parameters from the gRPC request
         # Both the Sender and the Reflector report the STAMP parameters to the
