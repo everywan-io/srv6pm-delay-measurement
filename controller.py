@@ -32,7 +32,7 @@ import logging
 import grpc
 
 import common_pb2
-from exceptions import NodeIdAlreadyExistsError
+from exceptions import NodeIdAlreadyExistsError, NodeIdNotFoundError
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
@@ -701,11 +701,19 @@ class Controller:
             The identifier of the STAMP Sender to be initialized.
 
         Returns
+        -------
         None
+
+        Raises
+        ------
+        NodeIdNotFoundError
+            If `node_id` does not correspond to any existing node.
         """
 
         # Retrieve the node information from the dict of STAMP nodes
-        node = self.stamp_nodes[node_id]   # TODO gestire caso se non esiste
+        node = self.stamp_nodes.get(node_id, None)
+        if node is None:
+            raise NodeIdNotFoundError
         # TODO check if it is a stamp sender
 
         # Establish a gRPC connection to the Sender
@@ -742,10 +750,17 @@ class Controller:
 
         Returns
         None
+
+        Raises
+        ------
+        NodeIdNotFoundError
+            If `node_id` does not correspond to any existing node.
         """
 
         # Retrieve the node information from the dict of STAMP nodes
-        node = self.stamp_nodes[node_id]   # TODO gestire caso se non esiste
+        node = self.stamp_nodes.get(node_id, None)
+        if node is None:
+            raise NodeIdNotFoundError
         # TODO check if it is a stamp reflector
 
         # Establish a gRPC connection to the Reflector
