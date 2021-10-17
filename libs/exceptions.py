@@ -27,6 +27,7 @@
 Exceptions used by STAMP library.
 """
 
+
 class InvalidSTAMPPacketError(Exception):   # TODO togliere?
     """
     Exception raised for errors in the STAMP packet.
