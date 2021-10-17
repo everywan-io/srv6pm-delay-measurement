@@ -32,7 +32,7 @@ import logging
 import grpc
 
 import common_pb2
-from exceptions import CreateSTAMPSessionError, DestroySTAMPSessionError, GetSTAMPResultsError, InitSTAMPNodeError, InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, NotAStampReflectorError, NotAStampSenderError, StartSTAMPSessionError, StopSTAMPSessionError
+from exceptions import CreateSTAMPSessionError, DestroySTAMPSessionError, GetSTAMPResultsError, InitSTAMPNodeError, InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, NotAStampReflectorError, NotAStampSenderError, ResetSTAMPNodeError, StartSTAMPSessionError, StopSTAMPSessionError
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
