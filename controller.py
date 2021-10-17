@@ -32,12 +32,34 @@ import logging
 import grpc
 
 import common_pb2
-from exceptions import CreateSTAMPSessionError, DestroySTAMPSessionError, GetSTAMPResultsError, InitSTAMPNodeError, InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, NotAStampReflectorError, NotAStampSenderError, ResetSTAMPNodeError, STAMPSessionNotFoundError, StartSTAMPSessionError, StopSTAMPSessionError
+
+from exceptions import (
+    CreateSTAMPSessionError,
+    DestroySTAMPSessionError,
+    GetSTAMPResultsError,
+    InitSTAMPNodeError,
+    InvalidStampNodeError,
+    NodeIdAlreadyExistsError,
+    NodeIdNotFoundError,
+    NodeInitializedError,
+    NodeNotInitializedError,
+    NotAStampReflectorError,
+    NotAStampSenderError, ResetSTAMPNodeError,
+    STAMPSessionNotFoundError,
+    StartSTAMPSessionError,
+    StopSTAMPSessionError)
+
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
-from utils import AuthenticationMode, DelayMeasurementMode, PacketLossType, SessionReflectorMode, TimestampFormat, py_to_grpc
+from utils import (
+    AuthenticationMode,
+    DelayMeasurementMode,
+    PacketLossType,
+    SessionReflectorMode,
+    TimestampFormat,
+    py_to_grpc)
 
 # Configure logging
 logging.basicConfig(
@@ -74,7 +96,7 @@ class STAMPNode:
     grpc_stub : # TODO
         gRPC stub to interact with the node.
     stamp_source_ipv6_address : str
-        The IPv6 address to be used as source IPv6 address of the STAMP 
+        The IPv6 address to be used as source IPv6 address of the STAMP
             packets. This can be overridden by providing a IPv6 address to the
             create_stamp_session method. If None, the Sender/Reflector will
             use the loopback IPv6 address as STAMP Source Address.
@@ -362,7 +384,8 @@ class STAMPSession:
         session_reflector_mode : common_pb2.SessionReflectorMode
             Mode used by the STAMP Reflector (i.e. Stateless or Stateful).
         store_individual_delays : bool, optional
-            Define whether to store the individual delays or not (default False).
+            Define whether to store the individual delays or not (default
+            False).
         """
 
         # Set STAMP session parameters
@@ -539,7 +562,8 @@ class STAMPSessionResults:
         ssid : int
             16-bit Segment Session Identifier (SSID) of the STAMP Session.
         store_individual_delays : bool, optional
-            Define whether to store the individual delays or not (default False).
+            Define whether to store the individual delays or not (default
+            False).
         """
 
         # Initialize all the attributes
@@ -694,7 +718,7 @@ class Controller:
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
         stamp_source_ipv6_address : str, optional
-            The IPv6 address to be used as source IPv6 address of the STAMP 
+            The IPv6 address to be used as source IPv6 address of the STAMP
              packets. This can be overridden by providing a IPv6 address to the
              create_stamp_session method. If None, the Sender/Reflector will
              use the loopback IPv6 address as STAMP Source Address
@@ -730,7 +754,7 @@ class Controller:
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
         stamp_source_ipv6_address : str, optional
-            The IPv6 address to be used as source IPv6 address of the STAMP 
+            The IPv6 address to be used as source IPv6 address of the STAMP
              packets. This can be overridden by providing a IPv6 address to the
              create_stamp_session method. If None, the Sender/Reflector will
              use the loopback IPv6 address as STAMP Source Address
@@ -1084,7 +1108,7 @@ class Controller:
              If this parameter is None, the delay measurement mode is decided
              by the STAMP node (default None).
         source_ip : str, optional
-            The IPv6 address to be used as source IPv6 address of the STAMP 
+            The IPv6 address to be used as source IPv6 address of the STAMP
             packets. If None, the address stored in the STAMP Node instance
             will be used as STAMP Source Address (default: None).
 
@@ -1169,7 +1193,7 @@ class Controller:
              If this parameter is None, the packet loss type is decided by the
              STAMP node (default None).
         source_ip : str, optional
-            The IPv6 address to be used as source IPv6 address of the STAMP 
+            The IPv6 address to be used as source IPv6 address of the STAMP
             packets. If None, the address stored in the STAMP Node instance
             will be used as STAMP Source Address (default: None).
 
@@ -1271,14 +1295,14 @@ class Controller:
             Define whether to store the individual delay values or not
              (default: False).
         sender_source_ip : str, optional
-            The IPv6 address to be used as source IPv6 address of the STAMP 
+            The IPv6 address to be used as source IPv6 address of the STAMP
             packets sent by the Sender. If None, the address stored in the
-            STAMP Sender instance will be used as STAMP Source Address 
+            STAMP Sender instance will be used as STAMP Source Address
             (default: None).
         reflector_source_ip : str, optional
-            The IPv6 address to be used as source IPv6 address of the STAMP 
+            The IPv6 address to be used as source IPv6 address of the STAMP
             packets sent by the Reflector. If None, the address stored in the
-            STAMP Reflector instance will be used as STAMP Source Address 
+            STAMP Reflector instance will be used as STAMP Source Address
             (default: None).
 
         Returns
