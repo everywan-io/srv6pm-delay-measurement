@@ -579,11 +579,11 @@ class STAMPSessionSenderServicer(
 
         # Check Delay Measurement Mode
         if delay_measurement_mode == \
-            DelayMeasurementMode.DELAY_MEASUREMENT_MODE_ONE_WAY:
+                DelayMeasurementMode.DELAY_MEASUREMENT_MODE_ONE_WAY:
             logger.fatal('One-Way Measurement Mode is not implemented')
             raise NotImplementedError  # TODO we need to support this!!!
         elif delay_measurement_mode == \
-            DelayMeasurementMode.DELAY_MEASUREMENT_MODE_LOOPBACK:
+                DelayMeasurementMode.DELAY_MEASUREMENT_MODE_LOOPBACK:
             logger.fatal('Loopback Measurement Mode is not implemented')
             raise NotImplementedError
 
