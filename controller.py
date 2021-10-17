@@ -1552,19 +1552,19 @@ class Controller:
 
         del self.stamp_sessions[ssid]
 
-    def get_stamp_results(self, ssid):
+    def collect_stamp_results(self, ssid):
         """
         Get the results collected by the STAMP Sender for the STAMP Session
-         identified by the SSID.
+         identified by the SSID and store them internally to the controller.
 
         Parameters
         ----------
         ssid : int
             The 16-bit STAMP Session Identifier (SSID)
 
-        Results
+        Returns
         -------
-        # TODO
+        None
         """
 
         # Get STAMP Session; if it does not exist, return an error
@@ -1614,16 +1614,71 @@ class Controller:
             stamp_session.stamp_session_return_path_results.add_new_delay(
                 new_delay=delay_return_path)
 
-            logger.info('\n*********')   # TODO
-            logger.info('Delay measured for the direct path: %f',
+            logger.debug('\n*********')
+            logger.debug('Delay measured for the direct path: %f',
                         delay_direct_path)
-            logger.info('Delay measured for the return path: %f',
+            logger.debug('Delay measured for the return path: %f',
                         delay_return_path)
-            logger.info('Mean delay for the direct path: %f',
-                        stamp_session.stamp_session_direct_path_results.mean_delay)   # TODO
-            logger.info('Mean delay for the return path: %f',
-                        stamp_session.stamp_session_return_path_results.mean_delay)   # TODO
-            logger.info('*********\n')   # TODO
+            logger.debug('Mean delay for the direct path: %f',
+                        stamp_session.stamp_session_direct_path_results.mean_delay)
+            logger.debug('Mean delay for the return path: %f',
+                        stamp_session.stamp_session_return_path_results.mean_delay)
+            logger.debug('*********\n')
+
+    def get_stamp_results(self, ssid):
+        """
+        Return the results stored in the controller.
+
+        Parameters
+        ----------
+        ssid : int
+            The 16-bit STAMP Session Identifier (SSID)
+
+        Returns
+        -------
+        direct_path_mean_delay : float
+            The mean delay of the direct path (Sender -> Reflector).
+        return_path_mean_delay : float
+            The mean delay of the return path (Reflector -> Sender).
+        """
+
+        # Get STAMP Session; if it does not exist, return an error
+        stamp_session = self.stamp_sessions.get(ssid, None)
+        if stamp_session is None:
+            logger.error('Session %d does not exist', ssid)
+            raise STAMPSessionNotFoundError(ssid)
+
+        # Return the mean delay
+        return (stamp_session.stamp_session_direct_path_results.mean_delay, 
+                stamp_session.stamp_session_return_path_results.mean_delay)
+
+    def print_stamp_results(self, ssid):
+        """
+        Print the results stored in the controller.
+
+        Parameters
+        ----------
+        ssid : int
+            The 16-bit STAMP Session Identifier (SSID)
+
+        Returns
+        -------
+        None.
+        """
+
+        # Get results from the controller inventory
+        mean_delay_direct_path, mean_delay_return_path = \
+            self.get_stamp_results(ssid)
+
+        # Print results
+        print()
+        print('*** Results for STAMP Session {ssid} ***'.format(ssid=ssid))
+        print('Mean delay for the direct path: {delay}'
+              .format(delay=mean_delay_direct_path))
+        print('Mean delay for the return path: {delay}'
+              .format(delay=mean_delay_return_path))
+        print('*******************************************')
+        print()
 
 # TODO se il pacchetto si parde seq num non deve incrementare? verificare!
         # TODO
