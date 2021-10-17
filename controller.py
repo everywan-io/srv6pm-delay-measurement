@@ -37,7 +37,7 @@ import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
-from utils import AuthenticationMode
+from utils import AuthenticationMode, DelayMeasurementMode, PacketLossType, SessionReflectorMode, TimestampFormat, py_to_grpc
 
 # Configure logging
 logging.basicConfig(
@@ -1107,16 +1107,19 @@ class Controller:
         if source_ip is not None:
             request.stamp_source_ipv6_address = source_ip
         if auth_mode is not None:
-            request.stamp_params.auth_mode = auth_mode
+            request.stamp_params.auth_mode = \
+                py_to_grpc(AuthenticationMode, auth_mode)
         if key_chain is not None:
             request.stamp_params.key_chain = key_chain
         if timestamp_format is not None:
-            request.stamp_params.timestamp_format = timestamp_format
+            request.stamp_params.timestamp_format = \
+                py_to_grpc(TimestampFormat, timestamp_format)
         if packet_loss_type is not None:
-            request.stamp_params.packet_loss_type = packet_loss_type
+            request.stamp_params.packet_loss_type = \
+                py_to_grpc(PacketLossType, packet_loss_type)
         if delay_measurement_mode is not None:
             request.stamp_params.delay_measurement_mode = \
-                delay_measurement_mode
+                py_to_grpc(DelayMeasurementMode, delay_measurement_mode)
 
         # Invoke the RPC
         reply = sender.grpc_stub.CreateStampSession(request)
@@ -1187,14 +1190,16 @@ class Controller:
         if source_ip is not None:
             request.stamp_source_ipv6_address = source_ip
         if auth_mode is not None:
-            request.stamp_params.auth_mode = auth_mode
+            request.stamp_params.auth_mode = \
+                py_to_grpc(AuthenticationMode, auth_mode)
         if key_chain is not None:
             request.stamp_params.key_chain = key_chain
         if timestamp_format is not None:
-            request.stamp_params.timestamp_format = timestamp_format
+            request.stamp_params.timestamp_format = \
+                py_to_grpc(TimestampFormat, timestamp_format)
         if session_reflector_mode is not None:
             request.stamp_params.session_reflector_mode = \
-                session_reflector_mode
+                py_to_grpc(SessionReflectorMode, session_reflector_mode)
 
         # Invoke the RPC
         reply = reflector.grpc_stub.CreateStampSession(request)
