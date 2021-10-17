@@ -1308,9 +1308,6 @@ class Controller:
         if not reflector.is_initialized:
             raise NodeNotInitializedError
 
-        # Create a request message
-        request = stamp_sender_pb2.CreateStampSenderSessionRequest()  # TODO
-
         # Pick a SSID from the reusable SSIDs pool
         # If the pool is empty, we take a new SSID
         if len(self.reusable_ssid) > 0:
@@ -1319,76 +1316,40 @@ class Controller:
             ssid = self.last_ssid + 1
             self.last_ssid += 1
 
-        # Process optional arguments
-
-        if auth_mode == 'unauthenticated':
-            auth_mode = (common_pb2.AuthenticationMode
-                         .AUTHENTICATION_MODE_UNAUTHENTICATED)
-        elif auth_mode == 'hmac-sha-256':
-            auth_mode = (common_pb2.AuthenticationMode
-                         .AUTHENTICATION_MODE_HMAC_SHA_256)
-
-        # request.stamp_params.key_chain = ...  # Not used in unauth mode
-
-        if timestamp_format == 'ntp':
-            request.stamp_params.timestamp_format = \
-                common_pb2.TimestampFormat.TIMESTAMP_FORMAT_NTP
-        elif timestamp_format == 'ptp':
-            request.stamp_params.timestamp_format = \
-                common_pb2.TimestampFormat.TIMESTAMP_FORMAT_PTPv2
-
-        if packet_loss_type == 'round-trip':
-            request.stamp_params.packet_loss_type = \
-                common_pb2.PacketLossType.PACKET_LOSS_TYPE_ROUND_TRIP
-        elif packet_loss_type == 'near-end':
-            request.stamp_params.packet_loss_type = \
-                common_pb2.PacketLossType.PACKET_LOSS_TYPE_NEAR_END
-        elif packet_loss_type == 'far-end':
-            request.stamp_params.packet_loss_type = \
-                common_pb2.PacketLossType.PACKET_LOSS_TYPE_FAR_END
-
-        if delay_measurement_mode == 'one-way':
-            request.stamp_params.delay_measurement_mode = \
-                common_pb2.DelayMeasurementMode.DELAY_MEASUREMENT_MODE_ONE_WAY
-        elif delay_measurement_mode == 'two-way':
-            request.stamp_params.delay_measurement_mode = \
-                common_pb2.DelayMeasurementMode.DELAY_MEASUREMENT_MODE_TWO_WAY
-        elif delay_measurement_mode == 'loopback':
-            request.stamp_params.delay_measurement_mode = \
-                common_pb2.DelayMeasurementMode.DELAY_MEASUREMENT_MODE_LOOPBACK
-
-        if session_reflector_mode == 'stateless':
-            request.stamp_params.session_reflector_mode = \
-                (common_pb2
-                 .DelayMeasurementMode.SESSION_REFLECTOR_MODE_STATELESS)
-        elif session_reflector_mode == 'stateful':
-            request.stamp_params.session_reflector_mode = \
-                common_pb2.DelayMeasurementMode.SESSION_REFLECTOR_MODE_STATEFUL
-
         # Create STAMP Session on the Sender
         sender_reply = self._create_stamp_sender_session(
-            ssid, sender, reflector, sidlist, interval, sender_source_ip)
+            ssid=ssid, sender=sender, reflector=reflector,
+            sidlist=sidlist, interval=interval, auth_mode=auth_mode,
+            key_chain=key_chain, timestamp_format=timestamp_format,
+            packet_loss_type=packet_loss_type,
+            delay_measurement_mode=delay_measurement_mode,
+            source_ip=sender_source_ip)
 
         # Create STAMP Session on the Reflector
         if reflector is not None:
             reflector_reply = self._create_stamp_reflector_session(
-                ssid, sender, reflector, return_sidlist, reflector_source_ip)
+                ssid=ssid, sender=sender, reflector=reflector,
+                return_sidlist=return_sidlist, auth_mode=auth_mode,
+                key_chain=key_chain, timestamp_format=timestamp_format,
+                session_reflector_mode=session_reflector_mode,
+                source_ip=reflector_source_ip)
 
         # Extract the STAMP parameters from the gRPC request
         # Both the Sender and the Reflector report the STAMP parameters to the
         # controller to inform it about the values chosen for the optional
         # parameters
 
-        # sender_udp_port = sender_reply.sender_udp_port  # TODO rimuovere?
-        reflector_ip = sender_reply.stamp_params.reflector_ip
         sender_key_chain = sender_reply.stamp_params.key_chain
         sender_timestamp_format = sender_reply.stamp_params.timestamp_format
         packet_loss_type = sender_reply.stamp_params.packet_loss_type
-        delay_measurement_mode = sender_reply.stamp_params.delay_measurement_mode
+        delay_measurement_mode = \
+            sender_reply.stamp_params.delay_measurement_mode
 
         reflector_key_chain = reflector_reply.stamp_params.key_chain
-        reflector_timestamp_format = reflector_reply.stamp_params.timestamp_format
-        session_reflector_mode = reflector_reply.stamp_params.session_reflector_mode
+        reflector_timestamp_format = \
+            reflector_reply.stamp_params.timestamp_format
+        session_reflector_mode = \
+            reflector_reply.stamp_params.session_reflector_mode
 
         # Sender and Reflector "reflector_udp_port" must be equal
         if sender_reply.stamp_params.reflector_udp_port != \
@@ -1397,10 +1358,9 @@ class Controller:
                          'Sender and the Reflector')
             exit(-1)
 
-        reflector_udp_port = sender_reply.stamp_params.reflector_udp_port
-
         # Sender and Reflector auth mode must be equal
-        if sender_reply.stamp_params.auth_mode != reflector_reply.stamp_params.auth_mode:
+        if sender_reply.stamp_params.auth_mode != \
+                reflector_reply.stamp_params.auth_mode:
             logger.fatal('BUG - Sender auth mode and Reflector auth mode '
                          'must be equal')
             exit(-1)
