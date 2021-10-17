@@ -549,8 +549,6 @@ class Controller:
 
     Attributes
     ----------
-    store_instant_delays : bool
-        Define whether to store or not the new delays.
     last_ssid : int
         Last used STAMP Session Identifier (SSID)
     reusable_ssid : set
@@ -615,14 +613,9 @@ class Controller:
         # TODO
     """
 
-    def __init__(self, store_instant_delays=False):
+    def __init__(self):
         """
         Constructs all the necessary attributes for the Controller object.
-
-        Parameters
-        ----------
-        store_instant_delays : bool, optional
-            Define whether to store or not the new delays (default False).
         """
 
         # Last used STAMP Session Identifier (SSID)
