@@ -72,12 +72,18 @@ class STAMPNode:
         gRPC channel to the node.
     grpc_stub : # TODO
         gRPC stub to interact with the node.
+    stamp_source_ipv6_address : str
+        The IPv6 address to be used as source IPv6 address of the STAMP 
+            packets. This can be overridden by providing a IPv6 address to the
+            create_stamp_session method. If None, the Sender/Reflector will
+            use the loopback IPv6 address as STAMP Source Address.
 
     Methods
     -------
     """
 
-    def __init__(self, node_id, grpc_ip, grpc_port, ip, interfaces=None):
+    def __init__(self, node_id, grpc_ip, grpc_port, ip, interfaces=None,
+                 stamp_source_ipv6_address=None):
         """
         A class to represent a STAMP node.
 
@@ -95,6 +101,12 @@ class STAMPNode:
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
+        stamp_source_ipv6_address : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP
+             packets. This can be overridden by providing a IPv6 address to the
+             create_stamp_session method. If None, the Sender/Reflector will
+             use the loopback IPv6 address as STAMP Source Address
+             (default: None).
         """
 
         # Store parameters
@@ -103,6 +115,7 @@ class STAMPNode:
         self.grpc_port = grpc_port
         self.ip = ip
         self.interfaces = interfaces
+        self.stamp_source_ipv6_address = stamp_source_ipv6_address
         # gRPC Channel and Stub are initially empty
         # They will be set when the STAMP node is initialized and a gRPC
         # connection to the node is established
@@ -132,20 +145,25 @@ class STAMPSender(STAMPNode):
         The gRPC port address of the STAMP node.
     ip : str
         The IP address of the STAMP node.
-    udp_port : int, optional
+    udp_port : int
         UDP port used by STAMP. If it is None, the Sender port will be chosen
-         randomly (default None).
-    interfaces : list, optional
+         randomly.
+    interfaces : list
         The list of the interfaces on which the STAMP node will listen for
          STAMP packets. If this parameter is None, the node will listen on all
-         the interfaces (default is None).
+         the interfaces.
+    stamp_source_ipv6_address : str
+        The IPv6 address to be used as source IPv6 address of the STAMP
+            packets. This can be overridden by providing a IPv6 address to the
+            create_stamp_session method. If None, the Sender/Reflector will
+            use the loopback IPv6 address as STAMP Source Address.
 
     Methods
     -------
     """
 
     def __init__(self, node_id, grpc_ip, grpc_port, ip, udp_port=None,
-                 interfaces=None):
+                 interfaces=None, stamp_source_ipv6_address=None):
         """
         A class to represent a STAMP Sender.
 
@@ -166,10 +184,17 @@ class STAMPSender(STAMPNode):
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
+        stamp_source_ipv6_address : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP
+             packets. This can be overridden by providing a IPv6 address to the
+             create_stamp_session method. If None, the Sender/Reflector will
+             use the loopback IPv6 address as STAMP Source Address
+             (default: None).
         """
 
         # Set parameters for a generic STAMP node
-        super().__init__(node_id, grpc_ip, grpc_port, ip, interfaces)
+        super().__init__(node_id, grpc_ip, grpc_port, ip, interfaces,
+                         stamp_source_ipv6_address)
         # Set the UDP port of the Sender
         self.udp_port = udp_port
 
@@ -192,17 +217,22 @@ class STAMPReflector(STAMPNode):
         The IP address of the STAMP node.
     udp_port : int
         UDP port used by STAMP.
-    interfaces : list, optional
+    interfaces : list
         The list of the interfaces on which the STAMP node will listen for
          STAMP packets. If this parameter is None, the node will listen on all
-         the interfaces (default is None).
+         the interfaces.
+    stamp_source_ipv6_address : str
+        The IPv6 address to be used as source IPv6 address of the STAMP
+            packets. This can be overridden by providing a IPv6 address to the
+            create_stamp_session method. If None, the Sender/Reflector will
+            use the loopback IPv6 address as STAMP Source Address.
 
     Methods
     -------
     """
 
     def __init__(self, node_id, grpc_ip, grpc_port, ip, udp_port,
-                 interfaces=None):
+                 interfaces=None, stamp_source_ipv6_address=None):
         """
         Constructs all the necessary attributes for the STAMP Reflector object.
 
@@ -222,10 +252,17 @@ class STAMPReflector(STAMPNode):
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
+        stamp_source_ipv6_address : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP
+             packets. This can be overridden by providing a IPv6 address to the
+             create_stamp_session method. If None, the Sender/Reflector will
+             use the loopback IPv6 address as STAMP Source Address
+             (default: None).
         """
 
         # Set parameters for a generic STAMP node
-        super().__init__(node_id, grpc_ip, grpc_port, ip, interfaces)
+        super().__init__(node_id, grpc_ip, grpc_port, ip, interfaces,
+                         stamp_source_ipv6_address)
         # Set the UDP port of the Reflector
         self.udp_port = udp_port
 
@@ -636,7 +673,7 @@ class Controller:
         self.stamp_sessions = dict()
 
     def add_stamp_sender(self, node_id, grpc_ip, grpc_port, ip, udp_port=None,
-                         interfaces=None):
+                         interfaces=None, stamp_source_ipv6_address=None):
         """
         Add a STAMP Sender to the Controller inventory.
 
@@ -651,6 +688,12 @@ class Controller:
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
+        stamp_source_ipv6_address : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP 
+             packets. This can be overridden by providing a IPv6 address to the
+             create_stamp_session method. If None, the Sender/Reflector will
+             use the loopback IPv6 address as STAMP Source Address
+             (default: None).
 
         Raises
         ------
@@ -664,11 +707,12 @@ class Controller:
         # Create a STAMP Sender object and store it
         node = STAMPSender(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
-            udp_port=udp_port, interfaces=interfaces)
+            udp_port=udp_port, interfaces=interfaces,
+            stamp_source_ipv6_address=stamp_source_ipv6_address)
         self.stamp_nodes[node_id] = node
 
     def add_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip, udp_port,
-                            interfaces=None):
+                            interfaces=None, stamp_source_ipv6_address=None):
         """
         Add a STAMP Reflector to the Controller inventory.
 
@@ -680,6 +724,12 @@ class Controller:
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
              all the interfaces (default is None).
+        stamp_source_ipv6_address : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP 
+             packets. This can be overridden by providing a IPv6 address to the
+             create_stamp_session method. If None, the Sender/Reflector will
+             use the loopback IPv6 address as STAMP Source Address
+             (default: None).
 
         Raises
         ------
@@ -693,7 +743,8 @@ class Controller:
         # Create a STAMP Sender object and store it
         node = STAMPReflector(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
-            udp_port=udp_port, interfaces=interfaces)
+            udp_port=udp_port, interfaces=interfaces,
+            stamp_source_ipv6_address=stamp_source_ipv6_address)
         self.stamp_nodes[node_id] = node
 
     def init_sender(self, node_id):
@@ -735,6 +786,8 @@ class Controller:
         request = stamp_sender_pb2.InitStampSenderRequest()
         request.sender_udp_port = node.udp_port
         request.interfaces.extend(node.interfaces)
+        if node.stamp_source_ipv6_address is not None:
+            request.stamp_source_ipv6_address = node.stamp_source_ipv6_address
 
         # Invoke the Init RPC
         reply = stub.Init(request)
@@ -787,6 +840,8 @@ class Controller:
         request = stamp_reflector_pb2.InitStampReflectorRequest()
         request.reflector_udp_port = node.udp_port
         request.interfaces.extend(node.interfaces)
+        if node.stamp_source_ipv6_address is not None:
+            request.stamp_source_ipv6_address = node.stamp_source_ipv6_address
 
         # Invoke Init RPC
         reply = stub.Init(request)
