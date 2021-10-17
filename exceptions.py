@@ -126,3 +126,44 @@ class InvalidStampNodeError(Exception):
         Numeric error code.
 
     """
+
+
+class NodeInitializedError(Exception):
+    """Raised when attempting to initialize an already inizialized node.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : :obj:`int`, optional
+        Numeric error code.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : int
+        Numeric error code.
+
+    """
+
+
+class NodeNotInitializedError(Exception):
+    """Raised when attempting to perform an operation on a node that has not
+    been initialized.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : :obj:`int`, optional
+        Numeric error code.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : int
+        Numeric error code.
+
+    """

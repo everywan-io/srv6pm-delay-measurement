@@ -32,7 +32,7 @@ import logging
 import grpc
 
 import common_pb2
-from exceptions import InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NotAStampReflectorError, NotAStampSenderError
+from exceptions import InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, NotAStampReflectorError, NotAStampSenderError
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
@@ -77,6 +77,8 @@ class STAMPNode:
             packets. This can be overridden by providing a IPv6 address to the
             create_stamp_session method. If None, the Sender/Reflector will
             use the loopback IPv6 address as STAMP Source Address.
+    is_initialized : bool
+        Flag indicating whether the node has been initialized or not.
 
     Methods
     -------
@@ -121,6 +123,8 @@ class STAMPNode:
         # connection to the node is established
         self.grpc_channel = None
         self.grpc_stub = None
+        # Flag indicating whether the node has been initialized or not
+        self.is_initialized = False
 
     def is_stamp_sender(self):
         return isinstance(self, STAMPSender)
@@ -778,6 +782,10 @@ class Controller:
         if not node.is_stamp_sender():
             raise NotAStampSenderError
 
+        # Check if the node has been already initialized
+        if node.is_initialized:
+            raise NodeInitializedError
+
         # Establish a gRPC connection to the Sender
         channel, stub = get_grpc_channel_sender(ip=node.grpc_ip,
                                                 port=node.grpc_port)
@@ -801,6 +809,9 @@ class Controller:
         # Store the channel and the stub
         node.grpc_channel = channel
         node.grpc_stub = stub
+
+        # Mark the node as initialized
+        node.is_initialized = True
 
     def init_reflector(self, node_id):
         """
@@ -832,6 +843,10 @@ class Controller:
         if not node.is_stamp_reflector():
             raise NotAStampReflectorError
 
+        # Check if the node has been already initialized
+        if node.is_initialized:
+            raise NodeInitializedError
+
         # Establish a gRPC connection to the Reflector
         channel, stub = get_grpc_channel_reflector(ip=node.grpc_ip,
                                                    port=node.grpc_port)
@@ -855,6 +870,9 @@ class Controller:
         # Store the channel and the stub
         node.grpc_channel = channel
         node.grpc_stub = stub
+
+        # Mark the node as initialized
+        node.is_initialized = True
 
     def init_stamp_node(self, node_id):
         """
@@ -911,7 +929,10 @@ class Controller:
         # Retrieve the node information from the dict of STAMP nodes
         node = self.stamp_nodes[node_id]   # TODO gestire caso se non esiste
         # TODO check if it is a stamp reflector
-        # TODO add is_initialized al nodo per verificare se è stato initislized
+
+        # Check if the node has been initialized
+        if not node.is_initialized:
+            raise NodeNotInitializedError
 
         # Prepare the request message
         request = stamp_sender_pb2.ResetStampSenderRequest()
@@ -944,7 +965,10 @@ class Controller:
         # Retrieve the node information from the dict of STAMP nodes
         node = self.stamp_nodes[node_id]   # TODO gestire caso se non esiste
         # TODO check if it is a stamp reflector
-        # TODO add is_initialized al nodo per verificare se è stato initislized
+
+        # Check if the node has been initialized
+        if not node.is_initialized:
+            raise NodeNotInitializedError
 
         # Prepare the request message
         request = stamp_reflector_pb2.ResetStampReflectorRequest()
@@ -1192,6 +1216,14 @@ class Controller:
         reflector = self.stamp_nodes[reflector_id]
         # TODO check if it is a stamp reflector
         # TODO add is_initialized al nodo per verificare se è stato initislized
+
+        # Check if the STAMP Sender has been initialized
+        if not sender.is_initialized:
+            raise NodeNotInitializedError
+
+        # Check if the STAMP Reflector has been initialized
+        if not reflector.is_initialized:
+            raise NodeNotInitializedError
 
         # Create a request message
         request = stamp_sender_pb2.CreateStampSenderSessionRequest()  # TODO
