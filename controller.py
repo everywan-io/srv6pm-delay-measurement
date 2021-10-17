@@ -956,6 +956,9 @@ class Controller:
         node.grpc_channel = None
         node.grpc_stub = None
 
+        # Mark the node as not initialized
+        node.is_initialized = False
+
     def reset_stamp_reflector(self, node_id):
         """
         Reset a STAMP Reflector and tear down the gRPC
@@ -997,6 +1000,9 @@ class Controller:
         node.grpc_channel.close()
         node.grpc_channel = None
         node.grpc_stub = None
+
+        # Mark the node as not initialized
+        node.is_initialized = False
 
     def _create_stamp_sender_session(self, ssid, sender, reflector,
                                      sidlist=[], interval=10, auth_mode=None,
