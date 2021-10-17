@@ -682,8 +682,6 @@ class Controller:
     get_stamp_results(ssid):
         Get the results collected by the STAMP Sender for the STAMP Session
          identified by the SSID.
-    compute_jitter():
-        # TODO
     """
 
     def __init__(self):
@@ -1691,24 +1689,3 @@ class Controller:
               .format(delay=mean_delay_return_path))
         print('*******************************************')
         print()
-
-# TODO se il pacchetto si parde seq num non deve incrementare? verificare!
-        # TODO
-
-        # TODO reuse ssid
-
-        # TODO strace
-
-    def compute_jitter(self):
-        pass  # TODO
-
-
-# TODO Aprire e salvare stub e canali sender e reflector
-# TODO aggiornare porta random sender con porta effettiva
-
-# TODO aggiungere async test + duration
-
-
-# TODO verificare se sono corretti i risultati
-
-# FIXME a volte valori negativi
