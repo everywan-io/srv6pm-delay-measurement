@@ -32,7 +32,7 @@ import logging
 import grpc
 
 import common_pb2
-from exceptions import CreateSTAMPSessionError, DestroySTAMPSessionError, GetSTAMPResultsError, InitSTAMPNodeError, InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, NotAStampReflectorError, NotAStampSenderError, ResetSTAMPNodeError, StartSTAMPSessionError, StopSTAMPSessionError
+from exceptions import CreateSTAMPSessionError, DestroySTAMPSessionError, GetSTAMPResultsError, InitSTAMPNodeError, InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, NotAStampReflectorError, NotAStampSenderError, ResetSTAMPNodeError, STAMPSessionNotFoundError, StartSTAMPSessionError, StopSTAMPSessionError
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
@@ -1450,7 +1450,7 @@ class Controller:
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
             logger.error('Session %d does not exist', ssid)
-            return  # TODO raise exception?
+            raise STAMPSessionNotFoundError(ssid)
 
         # Start STAMP Session on the Reflector, if any
         if stamp_session.reflector is not None:
@@ -1472,7 +1472,6 @@ class Controller:
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error(
                 'Cannot start STAMP Session on Sender: %s', reply.description)
-            return
             # Raise an exception
             raise StartSTAMPSessionError(reply.description)
 
@@ -1494,7 +1493,7 @@ class Controller:
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
             logger.error('Session %d does not exist', ssid)
-            return  # TODO raise exception?
+            raise STAMPSessionNotFoundError(ssid)
 
         # Stop STAMP Session on the Reflector, if any
         if stamp_session.reflector is not None:
@@ -1536,7 +1535,7 @@ class Controller:
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
             logger.error('Session %d does not exist', ssid)
-            return  # TODO raise exception?
+            raise STAMPSessionNotFoundError(ssid)
 
         # Destroy STAMP Session on the Reflector, if any
         if stamp_session.reflector is not None:
@@ -1583,7 +1582,7 @@ class Controller:
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
             logger.error('Session %d does not exist', ssid)
-            return  # TODO raise exception?
+            raise STAMPSessionNotFoundError(ssid)
 
         # Get results of the STAMP Session
         request = stamp_sender_pb2.GetStampSessionResultsRequest()

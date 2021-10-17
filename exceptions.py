@@ -303,4 +303,28 @@ class DestroySTAMPSessionError(Exception):
     """
 
     def __init__(self, msg=''):
-        super().__init__(msg)
+        self.msg = msg
+        super().__init__(self.msg)
+
+
+class STAMPSessionNotFoundError(Exception):
+    """Raised when attempting to perform an operation on a non-existing STAMP
+    Session.
+
+    Parameters
+    ----------
+    ssid : int
+        16-bit STAMP Session Identifier (SSID).
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, ssid=None):
+        self.msg = ''
+        if ssid is not None:
+            self.msg = 'STAMP Session {ssid} does not exist'.format(ssid=ssid)
+        super().__init__(self.msg)
