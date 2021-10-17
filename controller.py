@@ -1632,7 +1632,7 @@ class Controller:
         ssid : int
             The 16-bit STAMP Session Identifier (SSID).
         collect_results_from_stamp : bool, optional
-            Whether to collect the new results from the STAMP Sender. If 
+            Whether to collect the new results from the STAMP Sender. If
             False, only the results already stored in the controller inventory
             are returned (default: False).
 
@@ -1667,7 +1667,7 @@ class Controller:
         ssid : int
             The 16-bit STAMP Session Identifier (SSID).
         collect_results_from_stamp : bool, optional
-            Whether to collect the new results from the STAMP Sender. If 
+            Whether to collect the new results from the STAMP Sender. If
             False, only the results already stored in the controller inventory
             are returned (default: False).
 
