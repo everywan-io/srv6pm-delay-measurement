@@ -916,13 +916,12 @@ class Controller:
 
     def reset_stamp_sender(self, node_id):
         """
-        Reset a STAMP Sender and tear down the gRPC
-         connection.
+        Reset a STAMP Sender and tear down the gRPC connection.
 
         Parameters
         ----------
         node_id : str
-            The identifier of the STAMP Reflector to be initialized.
+            The identifier of the STAMP Reflector to be reset.
 
         Returns
         None
@@ -961,13 +960,12 @@ class Controller:
 
     def reset_stamp_reflector(self, node_id):
         """
-        Reset a STAMP Reflector and tear down the gRPC
-         connection.
+        Reset a STAMP Reflector and tear down the gRPC connection.
 
         Parameters
         ----------
         node_id : str
-            The identifier of the STAMP Reflector to be initialized.
+            The identifier of the STAMP Reflector to be reset.
 
         Returns
         None
