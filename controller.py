@@ -801,6 +801,44 @@ class Controller:
         node.grpc_channel = channel
         node.grpc_stub = stub
 
+    def init_stamp_node(self, node_id):
+        """
+        Establish a gRPC connection to a STAMP Session Node (either Sender or
+         Reflector) and initialize it.
+
+        Parameters
+        ----------
+        node_id : str
+            The identifier of the STAMP Reflector to be initialized.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NodeIdNotFoundError
+            If `node_id` does not correspond to any existing node.
+        NotAStampReflectorError
+            If node identified by `node_id` is not a STAMP Reflector.
+        InvalidStampNodeError
+            If node is neither a STAMP Sender nor a STAMP Reflector.
+        """
+
+        # Retrieve the node information from the dict of STAMP nodes
+        node = self.stamp_nodes.get(node_id, None)
+        if node is None:
+            raise NodeIdNotFoundError
+
+        # Check if the node is a STAMP Sender or a STAMP Reflector
+        if node.is_stamp_sender():
+            return self.init_sender(node_id)
+        if node.is_stamp_reflector():
+            return self.init_reflector(node_id)
+
+        # Node is neither a sender nor a reflector
+        raise InvalidStampNodeError
+
     def reset_stamp_sender(self, node_id):
         """
         Reset a STAMP Sender and tear down the gRPC
