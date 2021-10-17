@@ -28,6 +28,9 @@ This module provides several exceptions used by the Controller module.
 """
 
 
+from six import MAXSIZE
+
+
 class NodeIdAlreadyExistsError(Exception):
     """Raised when the Node ID is already used.
 
@@ -167,3 +170,137 @@ class NodeNotInitializedError(Exception):
         Numeric error code.
 
     """
+
+
+class InitSTAMPNodeError(Exception):
+    """Raised when an error occurs during the initialization of a STAMP node.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, msg=''):
+        super().__init__(msg)
+
+
+class ResetSTAMPNodeError(Exception):
+    """Raised when an error occurs during the reset operation of a STAMP node.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, msg=''):
+        super().__init__(msg)
+
+
+class CreateSTAMPSessionError(Exception):
+    """Raised when an error occurs during the creation of a STAMP Session.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, msg=''):
+        super().__init__(msg)
+
+
+class StartSTAMPSessionError(Exception):
+    """Raised when an error occurs when attempting to start a STAMP Session.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, msg=''):
+        super().__init__(msg)
+
+
+class StopSTAMPSessionError(Exception):
+    """Raised when an error occurs when attempting to stop a STAMP Session.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, msg=''):
+        super().__init__(msg)
+
+
+class GetSTAMPResultsError(Exception):
+    """Raised when an error occurs when attempting to retrieve the results of
+    a STAMP Session.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, msg=''):
+        super().__init__(msg)
+
+
+class DestroySTAMPSessionError(Exception):
+    """Raised when an error occurs when attempting to destroy a STAMP Session.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, msg=''):
+        super().__init__(msg)

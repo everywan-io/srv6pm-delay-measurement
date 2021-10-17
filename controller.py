@@ -32,7 +32,7 @@ import logging
 import grpc
 
 import common_pb2
-from exceptions import InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, NotAStampReflectorError, NotAStampSenderError
+from exceptions import CreateSTAMPSessionError, DestroySTAMPSessionError, GetSTAMPResultsError, InitSTAMPNodeError, InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, NotAStampReflectorError, NotAStampSenderError, StartSTAMPSessionError, StopSTAMPSessionError
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
@@ -804,7 +804,8 @@ class Controller:
             # Close the gRPC channel
             if channel is not None:
                 channel.close()
-            # TODO raise exception?
+            # Raise an exception
+            raise InitSTAMPNodeError(reply.description)
 
         # Store the channel and the stub
         node.grpc_channel = channel
@@ -865,7 +866,8 @@ class Controller:
             # Close the gRPC channel
             if channel is not None:
                 channel.close()
-            # TODO raise exception?
+            # Raise an exception
+            raise InitSTAMPNodeError(reply.description)
 
         # Store the channel and the stub
         node.grpc_channel = channel
@@ -941,7 +943,8 @@ class Controller:
         reply = node.grpc_stub.Reset(request)  # TODO
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot reset STAMP Node: %s', reply.description)
-            # TODO raise exception?
+            # Raise an exception
+            raise ResetSTAMPNodeError(reply.description)
 
         # Tear down the gRPC channel to the node
         node.grpc_channel.close()
@@ -977,7 +980,8 @@ class Controller:
         reply = node.grpc_stub.Reset(request)  # TODO
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot reset STAMP Node: %s', reply.description)
-            # TODO raise exception?
+            # Raise an exception
+            raise ResetSTAMPNodeError(reply.description)
 
         # Tear down the gRPC channel to the node
         node.grpc_channel.close()
@@ -1063,8 +1067,8 @@ class Controller:
         reply = sender.grpc_stub.CreateStampSession(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot create STAMP Session: %s', reply.description)
-            return
-            # TODO raise exception?
+            # Raise an exception
+            raise CreateSTAMPSessionError(reply.description)
 
         # Return the reply
         return reply
@@ -1135,8 +1139,8 @@ class Controller:
         reply = reflector.grpc_stub.CreateStampSession(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot create STAMP Session: %s', reply.description)
-            return
-            # TODO raise exception?
+            # Raise an exception
+            raise CreateSTAMPSessionError(reply.description)
 
         # Return the reply
         return reply
@@ -1379,8 +1383,8 @@ class Controller:
                 logger.error(
                     'Cannot start STAMP Session on Reflector: %s',
                     reply.description)
-                return
-                # TODO raise exception?
+                # Raise an exception
+                raise StartSTAMPSessionError(reply.description)
 
         # Start STAMP Session on the Sender
         request = stamp_sender_pb2.StartStampSenderSessionRequest()
@@ -1390,7 +1394,8 @@ class Controller:
             logger.error(
                 'Cannot start STAMP Session on Sender: %s', reply.description)
             return
-            # TODO raise exception?
+            # Raise an exception
+            raise StartSTAMPSessionError(reply.description)
 
     def stop_stamp_session(self, ssid):
         """
@@ -1421,8 +1426,8 @@ class Controller:
                 logger.error(
                     'Cannot stop STAMP Session on Reflector: %s',
                     reply.description)
-                return
-                # TODO raise exception?
+                # Raise an exception
+                raise StopSTAMPSessionError(reply.description)
 
         # Stop STAMP Session on the Sender
         request = stamp_sender_pb2.StopStampSenderSessionRequest()
@@ -1431,8 +1436,8 @@ class Controller:
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error(
                 'Cannot stop STAMP Session on Sender: %s', reply.description)
-            return
-            # TODO raise exception?
+            # Raise an exception
+            raise StopSTAMPSessionError(reply.description)
 
     def destroy_stamp_session(self, ssid):
         """
@@ -1464,8 +1469,8 @@ class Controller:
                 logger.error(
                     'Cannot destroy STAMP Session on Reflector: %s',
                     reply.description)
-                return
-                # TODO raise exception?
+                # Raise an exception
+                raise DestroySTAMPSessionError(reply.description)
 
         # Destroy STAMP Session on the Sender
         request = stamp_sender_pb2.DestroyStampSenderSessionRequest()
@@ -1475,8 +1480,8 @@ class Controller:
             logger.error(
                 'Cannot destroy STAMP Session on Sender: %s',
                 reply.description)
-            return
-            # TODO raise exception?
+            # Raise an exception
+            raise DestroySTAMPSessionError(reply.description)
 
         del self.stamp_sessions[ssid]
 
@@ -1509,8 +1514,8 @@ class Controller:
             logger.error(
                 'Cannot collect STAMP Session results (SSID %d): %s',
                 request.ssid, reply.description)
-            return
-            # TODO raise exception?
+            # Raise an exception
+            raise GetSTAMPResultsError(reply.description)
 
         # Iterate on each received result
         for res in reply.results:
