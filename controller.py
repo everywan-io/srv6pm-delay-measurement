@@ -1004,6 +1004,43 @@ class Controller:
         # Mark the node as not initialized
         node.is_initialized = False
 
+    def reset_stamp_node(self, node_id):
+        """
+        Reset a STAMP node (either Sender or Reflector) and tear down the gRPC
+         connection.
+
+        Parameters
+        ----------
+        node_id : str
+            The identifier of the STAMP node to be reset.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NodeIdNotFoundError
+            If `node_id` does not correspond to any existing node.
+        InvalidStampNodeError
+            If node is neither a STAMP Sender nor a STAMP Reflector.
+        """
+
+        # Retrieve the node information from the dict of STAMP nodes
+        node = self.stamp_nodes.get(node_id, None)
+        if node is None:
+            raise NodeIdNotFoundError
+
+        # Check if the node is a STAMP Sender or a STAMP Reflector
+        # and send reset command
+        if node.is_stamp_sender():
+            return self.reset_stamp_sender(node_id)
+        if node.is_stamp_reflector():
+            return self.reset_stamp_reflector(node_id)
+
+        # Node is neither a sender nor a reflector
+        raise InvalidStampNodeError
+
     def _create_stamp_sender_session(self, ssid, sender, reflector,
                                      sidlist=[], interval=10, auth_mode=None,
                                      key_chain=None, timestamp_format=None,
