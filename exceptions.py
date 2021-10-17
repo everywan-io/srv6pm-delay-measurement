@@ -28,9 +28,6 @@ This module provides several exceptions used by the Controller module.
 """
 
 
-from six import MAXSIZE
-
-
 class NodeIdAlreadyExistsError(Exception):
     """Raised when the Node ID is already used.
 
