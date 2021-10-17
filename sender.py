@@ -924,10 +924,3 @@ if __name__ == '__main__':
     # Run the gRPC server and block forever
     logger.debug('Starting gRPC server')
     run_grpc_server(grpc_ip, grpc_port)
-
-
-# TODO Sender e Reflector separati dal servicer
-# TODO spostare funzioni specifiche per sender e reflector da utils a classi
-# specifiche
-
-# TODO aggiungere is started ai proto?
