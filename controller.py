@@ -929,8 +929,13 @@ class Controller:
         """
 
         # Retrieve the node information from the dict of STAMP nodes
-        node = self.stamp_nodes[node_id]   # TODO gestire caso se non esiste
-        # TODO check if it is a stamp reflector
+        node = self.stamp_nodes.get(node_id, None)
+        if node is None:
+            raise NodeIdNotFoundError
+
+        # Check that the node is a STAMP Sender
+        if not node.is_stamp_sender():
+            raise NotAStampSenderError
 
         # Check if the node has been initialized
         if not node.is_initialized:
@@ -940,7 +945,7 @@ class Controller:
         request = stamp_sender_pb2.ResetStampSenderRequest()
 
         # Invoke the Reset RPC
-        reply = node.grpc_stub.Reset(request)  # TODO
+        reply = node.grpc_stub.Reset(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot reset STAMP Node: %s', reply.description)
             # Raise an exception
@@ -966,8 +971,13 @@ class Controller:
         """
 
         # Retrieve the node information from the dict of STAMP nodes
-        node = self.stamp_nodes[node_id]   # TODO gestire caso se non esiste
-        # TODO check if it is a stamp reflector
+        node = self.stamp_nodes.get(node_id, None)
+        if node is None:
+            raise NodeIdNotFoundError
+
+        # Check that the node is a STAMP Sender
+        if not node.is_stamp_reflector():
+            raise NotAStampReflectorError
 
         # Check if the node has been initialized
         if not node.is_initialized:
@@ -977,7 +987,7 @@ class Controller:
         request = stamp_reflector_pb2.ResetStampReflectorRequest()
 
         # Invoke the Reset RPC
-        reply = node.grpc_stub.Reset(request)  # TODO
+        reply = node.grpc_stub.Reset(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot reset STAMP Node: %s', reply.description)
             # Raise an exception
