@@ -1616,13 +1616,13 @@ class Controller:
 
             logger.debug('\n*********')
             logger.debug('Delay measured for the direct path: %f',
-                        delay_direct_path)
+                         delay_direct_path)
             logger.debug('Delay measured for the return path: %f',
-                        delay_return_path)
-            logger.debug('Mean delay for the direct path: %f',
-                        stamp_session.stamp_session_direct_path_results.mean_delay)
-            logger.debug('Mean delay for the return path: %f',
-                        stamp_session.stamp_session_return_path_results.mean_delay)
+                         delay_return_path)
+            logger.debug('Mean delay for the direct path: %f', stamp_session
+                         .stamp_session_direct_path_results.mean_delay)
+            logger.debug('Mean delay for the return path: %f', stamp_session
+                         .stamp_session_return_path_results.mean_delay)
             logger.debug('*********\n')
 
     def get_stamp_results(self, ssid, collect_results_from_stamp=False):
@@ -1657,7 +1657,7 @@ class Controller:
             self.collect_stamp_results(ssid)
 
         # Return the mean delay
-        return (stamp_session.stamp_session_direct_path_results.mean_delay, 
+        return (stamp_session.stamp_session_direct_path_results.mean_delay,
                 stamp_session.stamp_session_return_path_results.mean_delay)
 
     def print_stamp_results(self, ssid, collect_results_from_stamp):
