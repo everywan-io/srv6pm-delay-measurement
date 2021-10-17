@@ -1282,21 +1282,27 @@ class Controller:
             The SSID allocated to the STAMP Session.
         """
 
-        # Retrieve the node information from the dict of STAMP nodes
-        # TODO gestire caso se non esiste
-        sender = self.stamp_nodes[sender_id]
-        # TODO check if it is a stamp reflector
-        # TODO add is_initialized al nodo per verificare se è stato initislized
+        # Check if the STAMP Sender exists
+        sender = self.stamp_nodes.get(sender_id, None)
+        if sender is None:
+            raise NodeIdNotFoundError
 
-        # Retrieve the node information from the dict of STAMP nodes
-        # TODO gestire caso se non esiste
-        reflector = self.stamp_nodes[reflector_id]
-        # TODO check if it is a stamp reflector
-        # TODO add is_initialized al nodo per verificare se è stato initislized
+        # Check that the node is a STAMP Sender
+        if not sender.is_stamp_sender():
+            raise NotAStampSenderError
 
         # Check if the STAMP Sender has been initialized
         if not sender.is_initialized:
             raise NodeNotInitializedError
+
+        # Check if the STAMP Reflector exists
+        reflector = self.stamp_nodes.get(reflector_id, None)
+        if reflector is None:
+            raise NodeIdNotFoundError
+
+        # Check that the node is a STAMP Reflector
+        if not reflector.is_stamp_reflector():
+            raise NotAStampReflectorError
 
         # Check if the STAMP Reflector has been initialized
         if not reflector.is_initialized:
