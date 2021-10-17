@@ -93,7 +93,7 @@ class STAMPNode:
          the interfaces (default is None).
     grpc_channel : grpc._channel.Channel
         gRPC channel to the node.
-    grpc_stub : # TODO
+    grpc_stub : :object:
         gRPC stub to interact with the node.
     stamp_source_ipv6_address : str
         The IPv6 address to be used as source IPv6 address of the STAMP
@@ -431,7 +431,7 @@ def get_grpc_channel_sender(ip, port):
     -------
     channel : grpc._channel.Channel
         gRPC channel to the Sender.
-    stub : # TODO?
+    stub : stamp_sender_pb2_grpc.STAMPSessionSenderServiceStub
         Stub used to interact with the Sender.
     """
 
@@ -462,7 +462,7 @@ def get_grpc_channel_reflector(ip, port):
     -------
     channel : grpc._channel.Channel
         gRPC channel to the Reflector.
-    stub : # TODO?
+    stub : stamp_reflector_pb2_grpc.STAMPSessionReflectorServiceStub
         Stub used to interact with the Reflector.
     """
 
