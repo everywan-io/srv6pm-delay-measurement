@@ -66,3 +66,63 @@ class NodeIdNotFoundError(Exception):
         Numeric error code.
 
     """
+
+
+class NotAStampSenderError(Exception):
+    """Raised when Node is not a STAMP Sender.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : :obj:`int`, optional
+        Numeric error code.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : int
+        Numeric error code.
+
+    """
+
+
+class NotAStampReflectorError(Exception):
+    """Raised when Node is not a STAMP Reflector.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : :obj:`int`, optional
+        Numeric error code.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : int
+        Numeric error code.
+
+    """
+
+
+class InvalidStampNodeError(Exception):
+    """Raised when Node is neither a STAMP Sender nor a STAMP Reflector.
+
+    Parameters
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : :obj:`int`, optional
+        Numeric error code.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+    code : int
+        Numeric error code.
+
+    """

@@ -32,7 +32,7 @@ import logging
 import grpc
 
 import common_pb2
-from exceptions import NodeIdAlreadyExistsError, NodeIdNotFoundError
+from exceptions import InvalidStampNodeError, NodeIdAlreadyExistsError, NodeIdNotFoundError, NotAStampReflectorError, NotAStampSenderError
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
@@ -108,6 +108,12 @@ class STAMPNode:
         # connection to the node is established
         self.grpc_channel = None
         self.grpc_stub = None
+
+    def is_stamp_sender(self):
+        return isinstance(self, STAMPSender)
+
+    def is_stamp_reflector(self):
+        return isinstance(self, STAMPReflector)
 
 
 class STAMPSender(STAMPNode):
@@ -708,13 +714,18 @@ class Controller:
         ------
         NodeIdNotFoundError
             If `node_id` does not correspond to any existing node.
+        NotAStampSenderError
+            If node identified by `node_id` is not a STAMP Sender.
         """
 
         # Retrieve the node information from the dict of STAMP nodes
         node = self.stamp_nodes.get(node_id, None)
         if node is None:
             raise NodeIdNotFoundError
-        # TODO check if it is a stamp sender
+
+        # Check that the node is a STAMP Sender
+        if not node.is_stamp_sender():
+            raise NotAStampSenderError
 
         # Establish a gRPC connection to the Sender
         channel, stub = get_grpc_channel_sender(ip=node.grpc_ip,
@@ -755,13 +766,18 @@ class Controller:
         ------
         NodeIdNotFoundError
             If `node_id` does not correspond to any existing node.
+        NotAStampReflectorError
+            If node identified by `node_id` is not a STAMP Reflector.
         """
 
         # Retrieve the node information from the dict of STAMP nodes
         node = self.stamp_nodes.get(node_id, None)
         if node is None:
             raise NodeIdNotFoundError
-        # TODO check if it is a stamp reflector
+
+        # Check that the node is a STAMP Reflector
+        if not node.is_stamp_reflector():
+            raise NotAStampReflectorError
 
         # Establish a gRPC connection to the Reflector
         channel, stub = get_grpc_channel_reflector(ip=node.grpc_ip,
