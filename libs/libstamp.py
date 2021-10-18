@@ -204,7 +204,7 @@ def reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction):
 
     Parameters
     ----------
-    timestamp_sec : int
+    timestamp_seconds : int
         Seconds expressed as 32-bit unsigned int (spanning 136 years).
     timestamp_fraction : int
         Fraction of second expressed as 32-bit unsigned int (resolving 232
@@ -227,6 +227,29 @@ def reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction):
                       timestamp=timestamp))
 
     return timestamp
+
+
+def reassemble_timestamp_ptp(timestamp_seconds, timestamp_fraction):
+    """
+    Take seconds and fractional seconds and return the PTPv2 timestamp.
+
+    Parameters
+    ----------
+    timestamp_seconds : int
+        Seconds since the epoch expressed as 32-bit unsigned int (spanning 136
+         years). The PTP [IEEE1588] epoch is 1 January 1970 00:00:00 TAI.
+    timestamp_fraction : int
+        Fraction of second since the epoch expressed as 32-bit unsigned int
+         (resolving 232 picoseconds). The PTP [IEEE1588] epoch is 1 January
+         1970 00:00:00 TAI.
+
+    Returns
+    -------
+    timestamp : float
+        The reassembled PTPv2 Timestamp.
+    """
+
+    raise NotImplementedError
 
 
 def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
