@@ -216,6 +216,27 @@ class SyncFlag(enum.Enum):
     EXT_SYNC = 1
 
 
+def get_timestamp_unix():
+    """
+    Return the current timestamp (Unix Time).
+
+    Returns
+    -------
+    timestamp : float
+        UNIX Timestamp.
+    """
+
+    logging.debug('UNIX Timestamp requested')
+
+    # Get Unix Timestamp
+    #
+    # datetime uses an epoch of January 1, 1970 00:00h (Unix Time)
+    timestamp = datetime.timestamp(datetime.now())
+
+    # Return the UNIX timestamp
+    return timestamp
+
+
 def get_timestamp_ntp():
     """
     Return the current timestamp expressed in Network Time Protocol (NTP)
@@ -277,9 +298,10 @@ def get_timestamp_ptp():
     raise NotImplementedError
 
 
-def reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction):
+def ntp_to_unix_timestamp(timestamp_seconds, timestamp_fraction):
     """
-    Take seconds and fractional seconds and return the NTPv4 timestamp.
+    Take seconds and fractional seconds expressed in NTPv4 format and return
+    the UNIX timestamp.
 
     Parameters
     ----------
@@ -308,9 +330,10 @@ def reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction):
     return timestamp
 
 
-def reassemble_timestamp_ptp(timestamp_seconds, timestamp_fraction):
+def ptp_to_unix_timestamp(timestamp_seconds, timestamp_fraction):
     """
-    Take seconds and fractional seconds and return the PTPv2 timestamp.
+    Take seconds and fractional seconds expressed in PTPv2 format and return
+    the UNIX timestamp.
 
     Parameters
     ----------
@@ -639,25 +662,25 @@ def parse_stamp_reply_packet(packet):
     # Decode Timestamp and Receive Timestamp
     if z_flag == TimestampFormatFlag.NTP_v4.value:
         timestamp = \
-            reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction)
+            ntp_to_unix_timestamp(timestamp_seconds, timestamp_fraction)
         receive_timestamp = \
-            reassemble_timestamp_ntp(receive_timestamp_seconds,
+            ntp_to_unix_timestamp(receive_timestamp_seconds,
                                      receive_timestamp_fraction)
     elif z_flag == TimestampFormatFlag.PTP_V2.value:
         timestamp = \
-            reassemble_timestamp_ptp(timestamp_seconds, timestamp_fraction)
+            ptp_to_unix_timestamp(timestamp_seconds, timestamp_fraction)
         receive_timestamp = \
-            reassemble_timestamp_ptp(receive_timestamp_seconds,
+            ptp_to_unix_timestamp(receive_timestamp_seconds,
                                      receive_timestamp_fraction)
 
     # Decode Sender Timestamp
     if z_flag_sender == TimestampFormatFlag.NTP_v4.value:
         sender_timestamp = \
-            reassemble_timestamp_ntp(sender_timestamp_seconds,
+            ntp_to_unix_timestamp(sender_timestamp_seconds,
                                      sender_timestamp_fraction)
     elif z_flag_sender == TimestampFormatFlag.PTP_V2.value:
         sender_timestamp = \
-            reassemble_timestamp_ptp(sender_timestamp_seconds,
+            ptp_to_unix_timestamp(sender_timestamp_seconds,
                                      sender_timestamp_fraction)
 
     # Aggregate parsed information in a namedtuple
