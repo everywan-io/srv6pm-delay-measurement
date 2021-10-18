@@ -40,6 +40,7 @@ import time
 import grpc
 
 import common_pb2
+from srv6_delay_measurement.exceptions import ResetSTAMPNodeError
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
 
@@ -324,12 +325,17 @@ class STAMPSessionSenderServicer(
 
     def _reset(self):
         """
-        Helper function used to reset and stop the Sender.
+        Helper function used to reset and stop the Sender. In order to reset a
+        STAMP Sender there must be no STAMP sessions.
 
         Returns
         -------
-        success : bool
-            True if reset performed sucessfully, False otherwise.
+        None.
+
+        Raises
+        ------
+        ResetSTAMPNodeError
+            If STAMP Sessions exist.
         """
 
         logger.info('Resetting STAMP Session-Sender')
@@ -337,7 +343,7 @@ class STAMPSessionSenderServicer(
         # Prevent reset if some sessions exist
         if len(self.stamp_sessions) != 0:
             logging.error('Reset failed: STAMP Sessions exist')
-            return False  # TODO raise an exception?
+            raise ResetSTAMPNodeError('Reset failed: STAMP Sessions exist')
 
         # Stop and destroy the receive thread
         logger.info('Stopping receive thread')
@@ -381,7 +387,6 @@ class STAMPSessionSenderServicer(
 
         # Success
         logger.info('Reset completed')
-        return True
 
     def Init(self, request, context):
         """RPC used to configure the Session Sender."""
@@ -501,10 +506,11 @@ class STAMPSessionSenderServicer(
         logger.debug('Reset RPC invoked. Request: %s', request)
         logger.info('Attempting to reset STAMP node')
 
-        # Reset the Session Sender and check the return value
-        # If False is returned, the Reset command has failed and we return an
-        # error to the controller
-        if not self._reset():
+        # Reset the Session Sender. If there are sessions, the reset operation
+        # cannot be performed and we return an error to the controller
+        try:
+            self._reset()
+        except ResetSTAMPNodeError:
             logging.error('Reset RPC failed')
             return stamp_sender_pb2.ResetStampSenderReply(
                 status=common_pb2.StatusCode.STATUS_CODE_RESET_FAILED,
