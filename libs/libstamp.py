@@ -101,8 +101,6 @@ class STAMPReplyPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
 """  # TODO lasciare o togliere?
 
 
-
-
 class STAMPTestPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
     name = "TWAMPPacketSender"
     fields_desc = [IntField("SequenceNumber", 0),
@@ -305,7 +303,7 @@ def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
     # Build IPv6 header
     ipv6_header = IPv6()
     ipv6_header.src = src_ip
-    ipv6_header.dst = sidlist[0]  #dst_ip
+    ipv6_header.dst = sidlist[0]  # dst_ip
 
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
@@ -319,7 +317,7 @@ def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
     udp_header.sport = src_udp_port
 
     # Build payload (i.e. the STAMP packet)
-    stamp_packet = STAMPTestPacket( # TODO conflitto nomi con namedtuple
+    stamp_packet = STAMPTestPacket(  # TODO conflitto nomi con namedtuple
         SequenceNumber=sequence_number,
         FirstPartTimestamp=timestamp.seconds,
         SecondPartTimestamp=timestamp.fraction,
@@ -414,7 +412,7 @@ def generate_stamp_reply_packet(stamp_test_packet, src_ip, dst_ip,
     # Build IPv6 header
     ipv6_header = IPv6()
     ipv6_header.src = src_ip
-    ipv6_header.dst = sidlist[0]  #dst_ip
+    ipv6_header.dst = sidlist[0]  # dst_ip
 
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
@@ -485,7 +483,8 @@ def parse_stamp_test_packet(packet):
     ssid = packet[UDP].ssid
     timestamp_seconds = packet[UDP].FirstPartTimestamp
     timestamp_fraction = packet[UDP].SecondPartTimestamp
-    timestamp = reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction)  # TODO dipende dal formato del timestamp
+    # TODO dipende dal formato del timestamp
+    timestamp = reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction)
     s_flag = packet[UDP].S
     z_flag = packet[UDP].Z
     scale = packet[UDP].Scale
@@ -497,8 +496,8 @@ def parse_stamp_test_packet(packet):
                                     dst_udp_port=dst_udp_port,
                                     ssid=ssid,
                                     sequence_number=sequence_number,
-                                    timestamp_seconds=timestamp_seconds, 
-                                    timestamp_fraction=timestamp_fraction, 
+                                    timestamp_seconds=timestamp_seconds,
+                                    timestamp_fraction=timestamp_fraction,
                                     timestamp=timestamp, s_flag=s_flag,
                                     z_flag=z_flag, scale=scale,
                                     multiplier=multiplier)
@@ -529,7 +528,8 @@ def parse_stamp_reply_packet(packet):
     ssid = packet[UDP].ssid
     timestamp_seconds = packet[UDP].FirstPartTimestamp
     timestamp_fraction = packet[UDP].SecondPartTimestamp
-    timestamp = reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction)  # TODO dipende dal z flag
+    timestamp = reassemble_timestamp_ntp(
+        timestamp_seconds, timestamp_fraction)  # TODO dipende dal z flag
     s_flag = packet[UDP].S
     z_flag = packet[UDP].Z
     scale = packet[UDP].Scale
