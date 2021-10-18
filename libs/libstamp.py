@@ -48,23 +48,25 @@ from scapy.packet import Packet
 
 Timestamp = namedtuple('Timestamp', 'seconds fraction')
 
-StampTestPacket = namedtuple('StampTestPacket',
-                             'src_ip dst_ip src_udp_port dst_udp_port '
-                             'sequence_number ssid '
-                             'timestamp_seconds timestamp_fraction s_flag '
-                             'z_flag scale multiplier ttl')
+ParsedSTAMPTestPacket = namedtuple(
+    'ParsedSTAMPTestPacket',
+    'src_ip dst_ip src_udp_port dst_udp_port '
+    'sequence_number ssid '
+    'timestamp_seconds timestamp_fraction s_flag '
+    'z_flag scale multiplier ttl')
 
-StampTestReplyPacket = namedtuple('StampTestReplyPacket',
-                                  'sequence_number ssid timestamp '
-                                  'timestamp_seconds timestamp_fraction '
-                                  's_flag z_flag scale multiplier '
-                                  'receive_timestamp '
-                                  'receive_timestamp_seconds '
-                                  'receive_timestamp_fraction '
-                                  'sender_timestamp sender_timestamp_seconds '
-                                  'sender_timestamp_fraction s_flag_sender '
-                                  'z_flag_sender scale_sender '
-                                  'multiplier_sender ttl_sender')
+ParsedSTAMPTestReplyPacket = namedtuple(
+    'ParsedSTAMPTestReplyPacket',
+    'sequence_number ssid timestamp '
+    'timestamp_seconds timestamp_fraction '
+    's_flag z_flag scale multiplier '
+    'receive_timestamp '
+    'receive_timestamp_seconds '
+    'receive_timestamp_fraction '
+    'sender_timestamp sender_timestamp_seconds '
+    'sender_timestamp_fraction s_flag_sender '
+    'z_flag_sender scale_sender '
+    'multiplier_sender ttl_sender')
 
 
 # Constants to convert Unix timestamps to NTP version 4 64-bit
@@ -398,7 +400,7 @@ def generate_stamp_test_packet(
     udp_header.sport = src_udp_port
 
     # Build payload (i.e. the STAMP packet)
-    stamp_packet = STAMPTestPacket(  # TODO conflitto nomi con namedtuple
+    stamp_packet = STAMPTestPacket(
         SequenceNumber=sequence_number,
         FirstPartTimestamp=timestamp.seconds,
         SecondPartTimestamp=timestamp.fraction,
@@ -552,7 +554,7 @@ def parse_stamp_test_packet(packet):
 
     Returns
     -------
-    parsed_packet : libstamp.StampTestPacket
+    parsed_packet : libstamp.ParsedSTAMPTestPacket
         The parsed STAMP Test packet.
     """
 
@@ -577,15 +579,16 @@ def parse_stamp_test_packet(packet):
     multiplier = packet[UDP].Multiplier
 
     # Aggregate parsed information in a namedtuple
-    parsed_packet = StampTestPacket(src_ip=src_ip, dst_ip=dst_ip,
-                                    src_udp_port=src_udp_port,
-                                    dst_udp_port=dst_udp_port,
-                                    ssid=ssid,
-                                    sequence_number=sequence_number,
-                                    timestamp_seconds=timestamp_seconds,
-                                    timestamp_fraction=timestamp_fraction,
-                                    s_flag=s_flag, z_flag=z_flag, scale=scale,
-                                    multiplier=multiplier, ttl=ttl)
+    parsed_packet = ParsedSTAMPTestPacket(
+        src_ip=src_ip, dst_ip=dst_ip,
+        src_udp_port=src_udp_port,
+        dst_udp_port=dst_udp_port,
+        ssid=ssid,
+        sequence_number=sequence_number,
+        timestamp_seconds=timestamp_seconds,
+        timestamp_fraction=timestamp_fraction,
+        s_flag=s_flag, z_flag=z_flag, scale=scale,
+        multiplier=multiplier, ttl=ttl)
 
     # Return the parsed STAMP Test packet
     return parsed_packet
@@ -602,7 +605,7 @@ def parse_stamp_reply_packet(packet):
 
     Returns
     -------
-    parsed_packet : libstamp.StampTestReplyPacket
+    parsed_packet : libstamp.ParsedSTAMPTestReplyPacket
         The parsed STAMP Test Reply packet.
     """
 
@@ -656,7 +659,7 @@ def parse_stamp_reply_packet(packet):
                                      sender_timestamp_fraction)
 
     # Aggregate parsed information in a namedtuple
-    parsed_packet = StampTestReplyPacket(
+    parsed_packet = ParsedSTAMPTestReplyPacket(
         sequence_number=sequence_number, ssid=ssid, timestamp=timestamp,
         timestamp_seconds=timestamp_seconds,
         timestamp_fraction=timestamp_fraction, s_flag=s_flag, z_flag=z_flag,
