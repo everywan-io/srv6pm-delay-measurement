@@ -195,13 +195,13 @@ class STAMPSessionSenderServicer(
                 TimestampFormat.TIMESTAMP_FORMAT_NTP.value:
             timestamp_seconds, timestamp_fraction = \
                 libstamp.get_timestamp_ntp()  # TODO ottimizzare
-            timestamp = libstamp.reassemble_timestamp_ntp(
+            timestamp = libstamp.ntp_to_unix_timestamp(
                 timestamp_seconds, timestamp_fraction)
         elif stamp_session.timestamp_format == \
                 TimestampFormat.TIMESTAMP_FORMAT_PTPv2.value:
             timestamp_seconds, timestamp_fraction = \
                 libstamp.get_timestamp_ptp()  # TODO ottimizzare
-            timestamp = libstamp.reassemble_timestamp_ntp(
+            timestamp = libstamp.ntp_to_unix_timestamp(
                 timestamp_seconds, timestamp_fraction)
 
         # Append the timestamps to the results queue of the current STAMP
