@@ -52,7 +52,7 @@ StampTestPacket = namedtuple('StampTestPacket',
                              'src_ip dst_ip src_udp_port dst_udp_port '
                              'sequence_number ssid timestamp '
                              'timestamp_seconds timestamp_fraction s_flag '
-                             'z_flag scale multiplier')
+                             'z_flag scale multiplier ttl')
 
 StampTestReplyPacket = namedtuple('StampTestReplyPacket',
                                   'sequence_number ssid timestamp '
@@ -531,7 +531,7 @@ def generate_stamp_reply_packet(
         ZSender=parsed_stamp_test_packet.z_flag,
         ScaleSender=parsed_stamp_test_packet.scale,
         MultiplierSender=parsed_stamp_test_packet.multiplier,
-        SenderTTL=0  # TODO corretto?
+        SenderTTL=parsed_stamp_test_packet.ttl
     )
 
     # Assemble the whole packet
@@ -559,6 +559,7 @@ def parse_stamp_test_packet(packet):
     # Parse IPv6 header
     dst_ip = packet[IPv6].dst
     src_ip = packet[IPv6].src
+    ttl = packet[IPv6].hlim
 
     # Parse the UDP header
     dst_udp_port = packet[UDP].dport
@@ -587,7 +588,7 @@ def parse_stamp_test_packet(packet):
                                     timestamp_fraction=timestamp_fraction,
                                     timestamp=timestamp, s_flag=s_flag,
                                     z_flag=z_flag, scale=scale,
-                                    multiplier=multiplier)
+                                    multiplier=multiplier, ttl=ttl)
 
     # Return the parsed STAMP Test packet
     return parsed_packet
