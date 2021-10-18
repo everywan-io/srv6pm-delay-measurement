@@ -67,8 +67,10 @@ StampTestReplyPacket = namedtuple('StampTestReplyPacket',
                                   'multiplier_sender ttl_sender')
 
 
-# Constants to convert between python timestamps and NTP version 4 64-bit
+# Constants to convert Unix timestamps to NTP version 4 64-bit
 # binary format [RFC5905]
+# Unix Time and NTP differ by 70 years in seconds and 17 leap years
+# Therefore, the offset is computed as (70*365 + 17)*86400 = 2208988800
 TIMESTAMP_OFFSET = int(2208988800)  # Time Difference: 1-JAN-1900 to 1-JAN-1970
 ALL_BITS_MASK = int(0xFFFFFFFF)     # To calculate 32bit fraction of the second
 ALL_BITS_MASK_PTP = 10**9     # To calculate fraction of the second for PTP
@@ -152,8 +154,14 @@ def get_timestamp_ntp():
 
     logging.debug('NTP Timestamp requested')
 
-    # Get timestamp and split it in seconds and fraction of seconds
+    # Get Unix Timestamp
+    #
+    # datetime uses an epoch of January 1, 1970 00:00h (Unix Time)
+    # NTP uses an epoch of January 1, 1900 00:00h
+    # To get the NTP timestamp, we need to add an offset to the datetime
+    # timestamp (70 years + 17 leap years)
     timestamp = datetime.timestamp(datetime.now()) + TIMESTAMP_OFFSET
+    # Split timestamp in seconds and fraction of seconds
     timestamp_seconds = int(timestamp)
     timestamp_fraction = int((timestamp - int(timestamp)) *
                              ALL_BITS_MASK)  # 32bit fraction of the second
