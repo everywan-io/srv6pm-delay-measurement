@@ -40,7 +40,8 @@ from scapy.fields import (
     BitField,
     ByteField,
     IntField,
-    ShortField)
+    ShortField,
+    NBytesField)
 from scapy.layers.inet import UDP
 from scapy.layers.inet6 import IPv6, IPv6ExtHdrSegmentRouting
 from scapy.packet import Packet
@@ -88,7 +89,8 @@ class STAMPTestPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
                    BitField("Z", 0, 1),
                    BitField("Scale", 0, 6),
                    BitField("Multiplier", 1, 8),
-                   ShortField("ssid", 0)]  # TODO manca il padding
+                   ShortField("ssid", 0),
+                   NBytesField("MBZ", 0, 28)]  # 28 bytes MBZ
 
 
 class STAMPReplyPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
@@ -114,7 +116,8 @@ class STAMPReplyPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
                    BitField("ScaleSender", 0, 6),
                    BitField("MultiplierSender", 1, 8),
                    BitField("MBZ", 0, 16),
-                   ByteField("SenderTTL", 255)]  # TODO manca il padding
+                   ByteField("SenderTTL", 255),
+                   NBytesField("MBZ", 0, 3)]  # 3 bytes MBZ
 
 
 # Enum used by STAMP Sender and STAMP Reflector
