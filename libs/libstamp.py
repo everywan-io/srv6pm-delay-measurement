@@ -73,7 +73,6 @@ StampTestReplyPacket = namedtuple('StampTestReplyPacket',
 # Therefore, the offset is computed as (70*365 + 17)*86400 = 2208988800
 TIMESTAMP_OFFSET = int(2208988800)  # Time Difference: 1-JAN-1900 to 1-JAN-1970
 ALL_BITS_MASK = int(0xFFFFFFFF)     # To calculate 32bit fraction of the second
-ALL_BITS_MASK_PTP = 10**9     # To calculate fraction of the second for PTP
 # TODO migliorare nomi costanti
 
 
@@ -191,18 +190,8 @@ def get_timestamp_ptp():
     """
 
     logging.debug('PTP Timestamp requested')
-
-    # Get timestamp and split it in seconds and fraction of seconds
-    timestamp = datetime.timestamp(datetime.now()) + TIMESTAMP_OFFSET
-    timestamp_seconds = int(timestamp)  # TODO convertire in TAI
-    timestamp_fraction = int((timestamp - int(timestamp)) * ALL_BITS_MASK_PTP)
-
-    logging.debug('PTP Timestamp: {sec} seconds, {fraction} fractional seconds'
-                  .format(sec=timestamp_seconds, fraction=timestamp_fraction))
-
-    # Return the seconds expressed as 32-bit unsigned int and the Fraction of
-    # second expressed as 32-bit unsigned int
-    return Timestamp(seconds=timestamp_seconds, fraction=timestamp_fraction)
+    
+    raise NotImplementedError
 
 
 def reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction):
