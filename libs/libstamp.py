@@ -50,7 +50,7 @@ Timestamp = namedtuple('Timestamp', 'seconds fraction')
 
 StampTestPacket = namedtuple('StampTestPacket',
                              'src_ip dst_ip src_udp_port dst_udp_port '
-                             'sequence_number ssid timestamp '
+                             'sequence_number ssid '
                              'timestamp_seconds timestamp_fraction s_flag '
                              'z_flag scale multiplier ttl')
 
@@ -571,8 +571,6 @@ def parse_stamp_test_packet(packet):
     ssid = packet[UDP].ssid
     timestamp_seconds = packet[UDP].FirstPartTimestamp
     timestamp_fraction = packet[UDP].SecondPartTimestamp
-    # TODO dipende dal formato del timestamp
-    timestamp = reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction)
     s_flag = packet[UDP].S
     z_flag = packet[UDP].Z
     scale = packet[UDP].Scale
@@ -586,8 +584,7 @@ def parse_stamp_test_packet(packet):
                                     sequence_number=sequence_number,
                                     timestamp_seconds=timestamp_seconds,
                                     timestamp_fraction=timestamp_fraction,
-                                    timestamp=timestamp, s_flag=s_flag,
-                                    z_flag=z_flag, scale=scale,
+                                    s_flag=s_flag, z_flag=z_flag, scale=scale,
                                     multiplier=multiplier, ttl=ttl)
 
     # Return the parsed STAMP Test packet
