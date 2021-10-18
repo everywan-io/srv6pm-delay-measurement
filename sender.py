@@ -54,14 +54,17 @@ from utils import (
     UDP_DEST_PORT_FIELD,
     UDP_PROTOCOL_NUMBER,
     STAMPSenderSession,
-    AuthenticationMode,
-    TimestampFormat,
-    PacketLossType,
-    DelayMeasurementMode,
     grpc_to_py_resolve_defaults,
     py_to_grpc
 )
+
 from libs import libstamp
+from libs.libstamp import (
+    AuthenticationMode,
+    TimestampFormat,
+    PacketLossType,
+    DelayMeasurementMode
+)
 
 
 # Default command-line arguments

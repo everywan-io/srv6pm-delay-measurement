@@ -115,7 +115,81 @@ class STAMPReplyPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
                    ByteField("SenderTTL", 255)]  # TODO manca il padding
 
 
+# Enum used by STAMP Sender and STAMP Reflector
+
+class AuthenticationMode(enum.Enum):
+    """Authentication mode."""
+
+    # Authentication mode not specified
+    AUTHENTICATION_MODE_UNSPECIFIED = 'unspec'
+
+    # STAMP in unauthenticated mode
+    AUTHENTICATION_MODE_UNAUTHENTICATED = 'unauth'
+
+    # STAMP in authenticated mode (using HMAC SHA 256 algorithm)
+    AUTHENTICATION_MODE_HMAC_SHA_256 = 'hmac-sha-256'
+
+
 class TimestampFormat(enum.Enum):
+    """Format used for Timestamp."""
+
+    # Timestamp format not specified
+    TIMESTAMP_FORMAT_UNSPECIFIED = 'unspec'
+
+    # IEEE 1588v2 Precision Time Protocol (PTP) truncated 64-bit timestamp
+    # format [IEEE.1588.2008]
+    TIMESTAMP_FORMAT_PTPv2 = 'ptp'
+
+    # Network Time Protocol (NTP) version 4 64-bit timestamp format [RFC5905]
+    TIMESTAMP_FORMAT_NTP = 'ntp'
+
+
+class PacketLossType(enum.Enum):
+    """Type of Packet Loss Measurement."""
+
+    # Packet loss type not specified
+    PACKET_LOSS_TYPE_UNSPECIFIED = 'unspec'
+
+    # Round trip Packet Loss
+    PACKET_LOSS_TYPE_ROUND_TRIP = 'round-trip'
+
+    # Near End Packet Loss
+    PACKET_LOSS_TYPE_NEAR_END = 'near-end'
+
+    # Far End Packet Loss
+    PACKET_LOSS_TYPE_FAR_END = 'far-end'
+
+
+class DelayMeasurementMode(enum.Enum):
+    """Delay Measurement Mode."""
+
+    # Delay Measurement Mode unspecified
+    DELAY_MEASUREMENT_MODE_UNSPECIFIED = 'unspec'
+
+    # One-Way Measurement Mode
+    DELAY_MEASUREMENT_MODE_ONE_WAY = 'one-way'
+
+    # Two-Way Measurement Mode
+    DELAY_MEASUREMENT_MODE_TWO_WAY = 'two-way'
+
+    # Loopback Measurement Mode
+    DELAY_MEASUREMENT_MODE_LOOPBACK = 'loopback'
+
+
+class SessionReflectorMode(enum.Enum):
+    """Reflector mode."""
+
+    # Reflector mode unspecified
+    SESSION_REFLECTOR_MODE_UNSPECIFIED = 'unspec'
+
+    # Reflector working in Stateless mode
+    SESSION_REFLECTOR_MODE_STATELESS = 'stateless'
+
+    # Reflector working in Stateful mode
+    SESSION_REFLECTOR_MODE_STATEFUL = 'stateful'
+
+
+class TimestampFormatFlag(enum.Enum):
     """Format used for Timestamp."""
 
     # Network Time Protocol (NTP) version 4 64-bit timestamp format [RFC5905]
@@ -252,11 +326,11 @@ def reassemble_timestamp_ptp(timestamp_seconds, timestamp_fraction):
     raise NotImplementedError
 
 
-def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
-                               sidlist, ssid, sequence_number,
-                               timestamp_format='TIMESTAMP_FORMAT_NTP',
-                               ext_source_sync=False,
-                               scale=0, multiplier=1):
+def generate_stamp_test_packet(
+        src_ip, dst_ip, src_udp_port, dst_udp_port,
+        sidlist, ssid, sequence_number,
+        timestamp_format=TimestampFormat.TIMESTAMP_FORMAT_NTP.value,
+        ext_source_sync=False, scale=0, multiplier=1):
     """
     Generate a STAMP Test packet.
 
@@ -294,12 +368,12 @@ def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
     """
 
     # Get the timestamp depending on the timestamp format
-    if timestamp_format == 'ntp':
+    if timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_NTP.value:
         timestamp = get_timestamp_ntp()
-        timestamp_format_flag = TimestampFormat.NTP_v4.value
-    elif timestamp_format == 'ptp':
+        timestamp_format_flag = TimestampFormatFlag.NTP_v4.value
+    elif timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_PTPv2.value:
         timestamp = get_timestamp_ptp()
-        timestamp_format_flag = TimestampFormat.PTP_V2.value
+        timestamp_format_flag = TimestampFormatFlag.PTP_V2.value
 
     # Translate external source sync
     if ext_source_sync:
@@ -341,12 +415,12 @@ def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
     return packet
 
 
-def generate_stamp_reply_packet(stamp_test_packet, src_ip, dst_ip,
-                                src_udp_port, dst_udp_port, sidlist,
-                                ssid, sequence_number,
-                                timestamp_format='TIMESTAMP_FORMAT_NTP',
-                                ext_source_sync=False, scale=0, multiplier=1,
-                                sender_sequence_number=None):
+def generate_stamp_reply_packet(
+        stamp_test_packet, src_ip, dst_ip,
+        src_udp_port, dst_udp_port, sidlist, ssid, sequence_number,
+        timestamp_format=TimestampFormat.TIMESTAMP_FORMAT_NTP.value,
+        ext_source_sync=False, scale=0, multiplier=1,
+        sender_sequence_number=None):
     """
     Generate a STAMP Test Reply packet.
 
@@ -397,12 +471,12 @@ def generate_stamp_reply_packet(stamp_test_packet, src_ip, dst_ip,
     parsed_stamp_test_packet = parse_stamp_test_packet(stamp_test_packet)
 
     # Get the timestamp depending on the timestamp format
-    if timestamp_format == 'ntp':
+    if timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_NTP.value:
         timestamp = get_timestamp_ntp()
-        timestamp_format_flag = TimestampFormat.NTP_v4.value
-    elif timestamp_format == 'ptp':
+        timestamp_format_flag = TimestampFormatFlag.NTP_v4.value
+    elif timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_PTPv2.value:
         timestamp = get_timestamp_ptp()
-        timestamp_format_flag = TimestampFormat.PTP_V2.value
+        timestamp_format_flag = TimestampFormatFlag.PTP_V2.value
 
     # Translate external source sync
     if ext_source_sync:

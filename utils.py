@@ -30,6 +30,12 @@ import queue
 import logging
 
 import common_pb2
+from libs.libstamp import (
+    AuthenticationMode,
+    DelayMeasurementMode,
+    PacketLossType,
+    SessionReflectorMode,
+    TimestampFormat)
 
 
 # Maximum STAMP Sequence Number
@@ -82,80 +88,6 @@ UDP_HEADER_OFFSET = str(SRH_OFFSET) + SRH_LENGTH
 # UDP Destination Port value
 UDP_DEST_PORT_FIELD = 'ip6[%d + %s + %d : %d]' % (
     SRH_OFFSET, SRH_LENGTH, UDP_DEST_PORT_OFFSET, UDP_DEST_PORT_LENGTH)
-
-
-# Enum used by STAMP Sender and STAMP Reflector
-
-class AuthenticationMode(enum.Enum):
-    """Authentication mode."""
-
-    # Authentication mode not specified
-    AUTHENTICATION_MODE_UNSPECIFIED = 'unspec'
-
-    # STAMP in unauthenticated mode
-    AUTHENTICATION_MODE_UNAUTHENTICATED = 'unauth'
-
-    # STAMP in authenticated mode (using HMAC SHA 256 algorithm)
-    AUTHENTICATION_MODE_HMAC_SHA_256 = 'hmac-sha-256'
-
-
-class TimestampFormat(enum.Enum):
-    """Format used for Timestamp."""
-
-    # Timestamp format not specified
-    TIMESTAMP_FORMAT_UNSPECIFIED = 'unspec'
-
-    # IEEE 1588v2 Precision Time Protocol (PTP) truncated 64-bit timestamp
-    # format [IEEE.1588.2008]
-    TIMESTAMP_FORMAT_PTPv2 = 'ptp'
-
-    # Network Time Protocol (NTP) version 4 64-bit timestamp format [RFC5905]
-    TIMESTAMP_FORMAT_NTP = 'ntp'
-
-
-class PacketLossType(enum.Enum):
-    """Type of Packet Loss Measurement."""
-
-    # Packet loss type not specified
-    PACKET_LOSS_TYPE_UNSPECIFIED = 'unspec'
-
-    # Round trip Packet Loss
-    PACKET_LOSS_TYPE_ROUND_TRIP = 'round-trip'
-
-    # Near End Packet Loss
-    PACKET_LOSS_TYPE_NEAR_END = 'near-end'
-
-    # Far End Packet Loss
-    PACKET_LOSS_TYPE_FAR_END = 'far-end'
-
-
-class DelayMeasurementMode(enum.Enum):
-    """Delay Measurement Mode."""
-
-    # Delay Measurement Mode unspecified
-    DELAY_MEASUREMENT_MODE_UNSPECIFIED = 'unspec'
-
-    # One-Way Measurement Mode
-    DELAY_MEASUREMENT_MODE_ONE_WAY = 'one-way'
-
-    # Two-Way Measurement Mode
-    DELAY_MEASUREMENT_MODE_TWO_WAY = 'two-way'
-
-    # Loopback Measurement Mode
-    DELAY_MEASUREMENT_MODE_LOOPBACK = 'loopback'
-
-
-class SessionReflectorMode(enum.Enum):
-    """Reflector mode."""
-
-    # Reflector mode unspecified
-    SESSION_REFLECTOR_MODE_UNSPECIFIED = 'unspec'
-
-    # Reflector working in Stateless mode
-    SESSION_REFLECTOR_MODE_STATELESS = 'stateless'
-
-    # Reflector working in Stateful mode
-    SESSION_REFLECTOR_MODE_STATEFUL = 'stateful'
 
 
 class StatusCode(enum.Enum):

@@ -51,13 +51,16 @@ from utils import (
     UDP_DEST_PORT_FIELD,
     UDP_PROTOCOL_NUMBER,
     STAMPReflectorSession,
-    AuthenticationMode,
-    TimestampFormat,
-    SessionReflectorMode,
     grpc_to_py_resolve_defaults,
     py_to_grpc
 )
+
 from libs import libstamp
+from libs.libstamp import (
+    AuthenticationMode,
+    TimestampFormat,
+    SessionReflectorMode
+)
 
 
 # Default command-line arguments

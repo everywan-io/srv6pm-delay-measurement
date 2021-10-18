@@ -53,13 +53,17 @@ import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
-from utils import (
+
+from utils import py_to_grpc
+
+from libs.libstamp import (
     AuthenticationMode,
     DelayMeasurementMode,
     PacketLossType,
     SessionReflectorMode,
-    TimestampFormat,
-    py_to_grpc)
+    TimestampFormat
+)
+
 
 # Configure logging
 logging.basicConfig(
