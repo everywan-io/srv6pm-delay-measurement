@@ -371,7 +371,8 @@ class STAMPTestResults:
     def __init__(self, ssid, test_pkt_tx_timestamp, reply_pkt_tx_timestamp,
                  reply_pkt_rx_timestamp, test_pkt_rx_timestamp):
         """
-        Constructs all the necessary attributes for the STAMP Test Results object.
+        Constructs all the necessary attributes for the STAMP Test Results
+        object.
 
         ssid : int
             16-bit Session Segment Identifier (SSID).
