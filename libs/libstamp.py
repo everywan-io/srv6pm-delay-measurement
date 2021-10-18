@@ -81,43 +81,43 @@ _32_BIT_MASK = int(0xFFFFFFFF)     # To calculate 32bit fraction of the second
 
 class STAMPTestPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
     name = "TWAMPPacketSender"
-    fields_desc = [IntField("SequenceNumber", 0),
-                   BitField("FirstPartTimestamp", 0, 32),
-                   BitField("SecondPartTimestamp", 0, 32),
-                   BitEnumField("S", 0, 1, {0: " no external synchronization",
+    fields_desc = [IntField("seq_num", 0),
+                   BitField("first_part_timestamp", 0, 32),
+                   BitField("second_part_timestamp", 0, 32),
+                   BitEnumField("S", 0, 1, {0: "no external synchronization",
                                             1: "external synchronization"}),
                    BitField("Z", 0, 1),
-                   BitField("Scale", 0, 6),
-                   BitField("Multiplier", 1, 8),
+                   BitField("scale", 0, 6),
+                   BitField("multiplier", 1, 8),
                    ShortField("ssid", 0),
-                   NBytesField("MBZ", 0, 28)]  # 28 bytes MBZ
+                   NBytesField("mbz", 0, 28)]  # 28 bytes MBZ
 
 
 class STAMPReplyPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
     name = "TWAMPPacketReflector"
-    fields_desc = [IntField("SequenceNumber", 0),
-                   BitField("FirstPartTimestamp", 0, 32),
-                   BitField("SecondPartTimestamp", 0, 32),
-                   BitEnumField("S", 0, 1, {0: " no external synchronization",
+    fields_desc = [IntField("seq_num", 0),
+                   BitField("first_part_timestamp", 0, 32),
+                   BitField("second_part_timestamp", 0, 32),
+                   BitEnumField("S", 0, 1, {0: "no external synchronization",
                                             1: "external synchronization"}),
                    BitField("Z", 0, 1),
-                   BitField("Scale", 0, 6),
-                   BitField("Multiplier", 1, 8),
+                   BitField("scale", 0, 6),
+                   BitField("multiplier", 1, 8),
                    ShortField("ssid", 0),
-                   BitField("FirstPartTimestampReceiver", 0, 32),
-                   BitField("SecondPartTimestampReceiver", 0, 32),
-                   IntField("SequenceNumberSender", 0),
-                   BitField("FirstPartTimestampSender", 0, 32),
-                   BitField("SecondPartTimestampSender", 0, 32),
-                   BitEnumField("SSender", 0, 1, {
-                       0: " no external synchronization",
+                   BitField("first_part_timestamp_receiver", 0, 32),
+                   BitField("second_part_timestamp_receiver", 0, 32),
+                   IntField("seq_num_sender", 0),
+                   BitField("first_part_timestamp_sender", 0, 32),
+                   BitField("second_part_timestamp_sender", 0, 32),
+                   BitEnumField("S_sender", 0, 1, {
+                       0: "no external synchronization",
                        1: "external synchronization"}),
-                   BitField("ZSender", 0, 1),
-                   BitField("ScaleSender", 0, 6),
-                   BitField("MultiplierSender", 1, 8),
-                   BitField("MBZ", 0, 16),
-                   ByteField("SenderTTL", 255),
-                   NBytesField("MBZ", 0, 3)]  # 3 bytes MBZ
+                   BitField("Z_sender", 0, 1),
+                   BitField("scale_sender", 0, 6),
+                   BitField("multiplier_sender", 1, 8),
+                   BitField("mbz", 0, 16),
+                   ByteField("sender_ttl", 255),
+                   NBytesField("mbz", 0, 3)]  # 3 bytes MBZ
 
 
 # Enum used by STAMP Sender and STAMP Reflector
@@ -404,13 +404,13 @@ def generate_stamp_test_packet(
 
     # Build payload (i.e. the STAMP packet)
     stamp_packet = STAMPTestPacket(
-        SequenceNumber=sequence_number,
-        FirstPartTimestamp=timestamp.seconds,
-        SecondPartTimestamp=timestamp.fraction,
+        seq_num=sequence_number,
+        first_part_timestamp=timestamp.seconds,
+        second_part_timestamp=timestamp.fraction,
         S=sync_flag,
         Z=timestamp_format_flag,
-        Scale=scale,
-        Multiplier=multiplier
+        scale=scale,
+        multiplier=multiplier
     )
 
     # Assemble the whole packet
@@ -519,24 +519,23 @@ def generate_stamp_reply_packet(
 
     # Build payload (i.e. the STAMP packet)
     stamp_packet = STAMPReplyPacket(
-        SequenceNumber=sequence_number,
-        FirstPartTimestamp=timestamp.seconds,
-        SecondPartTimestamp=timestamp.fraction,
+        seq_num=sequence_number,
+        first_part_timestamp=timestamp.seconds,
+        second_part_timestamp=timestamp.fraction,
         S=sync_flag,
         Z=timestamp_format_flag,
-        Scale=scale,
-        Multiplier=multiplier,
-        MBZ=0,
-        FirstPartTimestampReceiver=timestamp.seconds,
-        SecondPartTimestampReceiver=timestamp.fraction,
-        SequenceNumberSender=parsed_stamp_test_packet.sequence_number,
-        FirstPartTimestampSender=parsed_stamp_test_packet.timestamp_seconds,
-        SecondPartTimestampSender=parsed_stamp_test_packet.timestamp_fraction,
-        SSender=parsed_stamp_test_packet.s_flag,
-        ZSender=parsed_stamp_test_packet.z_flag,
-        ScaleSender=parsed_stamp_test_packet.scale,
-        MultiplierSender=parsed_stamp_test_packet.multiplier,
-        SenderTTL=parsed_stamp_test_packet.ttl
+        scale=scale,
+        multiplier=multiplier,
+        first_part_timestamp_receiver=timestamp.seconds,
+        second_part_timestamp_receiver=timestamp.fraction,
+        seq_num_sender=parsed_stamp_test_packet.sequence_number,
+        first_part_timestamp_sender=parsed_stamp_test_packet.timestamp_seconds,
+        second_part_timestamp_sender=parsed_stamp_test_packet.timestamp_fraction,
+        S_sender=parsed_stamp_test_packet.s_flag,
+        Z_sender=parsed_stamp_test_packet.z_flag,
+        scale_sender=parsed_stamp_test_packet.scale,
+        multiplier_sender=parsed_stamp_test_packet.multiplier,
+        sender_ttl=parsed_stamp_test_packet.ttl
     )
 
     # Assemble the whole packet
@@ -572,14 +571,14 @@ def parse_stamp_test_packet(packet):
 
     # Parse the payload (i.e. the STAMP Test packet)
     packet[UDP].decode_payload_as(STAMPTestPacket)
-    sequence_number = packet[UDP].SequenceNumber
+    sequence_number = packet[UDP].seq_num
     ssid = packet[UDP].ssid
-    timestamp_seconds = packet[UDP].FirstPartTimestamp
-    timestamp_fraction = packet[UDP].SecondPartTimestamp
+    timestamp_seconds = packet[UDP].first_part_timestamp
+    timestamp_fraction = packet[UDP].second_part_timestamp
     s_flag = packet[UDP].S
     z_flag = packet[UDP].Z
-    scale = packet[UDP].Scale
-    multiplier = packet[UDP].Multiplier
+    scale = packet[UDP].scale
+    multiplier = packet[UDP].multiplier
 
     # Aggregate parsed information in a namedtuple
     parsed_packet = ParsedSTAMPTestPacket(
@@ -615,23 +614,23 @@ def parse_stamp_reply_packet(packet):
     # Parse the payload (i.e. the STAMP Test Reply packet) and extract the
     # three timestamps from the packet
     packet[UDP].decode_payload_as(STAMPReplyPacket)
-    sequence_number = packet[UDP].SequenceNumber
+    sequence_number = packet[UDP].seq_num
     ssid = packet[UDP].ssid
-    timestamp_seconds = packet[UDP].FirstPartTimestamp
-    timestamp_fraction = packet[UDP].SecondPartTimestamp
+    timestamp_seconds = packet[UDP].first_part_timestamp
+    timestamp_fraction = packet[UDP].second_part_timestamp
     s_flag = packet[UDP].S
     z_flag = packet[UDP].Z
-    scale = packet[UDP].Scale
-    multiplier = packet[UDP].Multiplier
-    receive_timestamp_seconds = packet[UDP].FirstPartTimestampReceiver
-    receive_timestamp_fraction = packet[UDP].SecondPartTimestampReceiver
-    sender_timestamp_seconds = packet[UDP].FirstPartTimestampSender
-    sender_timestamp_fraction = packet[UDP].SecondPartTimestampSender
-    s_flag_sender = packet[UDP].SSender
-    z_flag_sender = packet[UDP].ZSender
-    scale_sender = packet[UDP].ScaleSender
-    multiplier_sender = packet[UDP].MultiplierSender
-    ttl_sender = packet[UDP].SenderTTL
+    scale = packet[UDP].scale
+    multiplier = packet[UDP].multiplier
+    receive_timestamp_seconds = packet[UDP].first_part_timestamp_receiver
+    receive_timestamp_fraction = packet[UDP].second_part_timestamp_receiver
+    sender_timestamp_seconds = packet[UDP].first_part_timestamp_sender
+    sender_timestamp_fraction = packet[UDP].second_part_timestamp_sender
+    s_flag_sender = packet[UDP].S_sender
+    z_flag_sender = packet[UDP].Z_sender
+    scale_sender = packet[UDP].scale_sender
+    multiplier_sender = packet[UDP].multiplier_sender
+    ttl_sender = packet[UDP].sender_ttl
 
     # Decode Timestamp seconds and fraction and reassemble them into Timestamp
     # Timestamp decoding depends on the Timestamp Format which has been used
