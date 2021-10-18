@@ -71,9 +71,9 @@ StampTestReplyPacket = namedtuple('StampTestReplyPacket',
 # binary format [RFC5905]
 # Unix Time and NTP differ by 70 years in seconds and 17 leap years
 # Therefore, the offset is computed as (70*365 + 17)*86400 = 2208988800
-TIMESTAMP_OFFSET = int(2208988800)  # Time Difference: 1-JAN-1900 to 1-JAN-1970
-ALL_BITS_MASK = int(0xFFFFFFFF)     # To calculate 32bit fraction of the second
-# TODO migliorare nomi costanti
+# Time Difference: 1-JAN-1900 to 1-JAN-1970
+UNIX_TO_NTP_TIMESTAMP_OFFSET = int(2208988800)  # 1-JAN-1900 to 1-JAN-1970
+_32_BIT_MASK = int(0xFFFFFFFF)     # To calculate 32bit fraction of the second
 
 
 class STAMPTestPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
@@ -159,11 +159,15 @@ def get_timestamp_ntp():
     # NTP uses an epoch of January 1, 1900 00:00h
     # To get the NTP timestamp, we need to add an offset to the datetime
     # timestamp (70 years + 17 leap years)
-    timestamp = datetime.timestamp(datetime.now()) + TIMESTAMP_OFFSET
+    timestamp = \
+        datetime.timestamp(datetime.now()) + UNIX_TO_NTP_TIMESTAMP_OFFSET
+
     # Split timestamp in seconds and fraction of seconds
+    #
+    # Seconds expressed as 32-bit unsigned int
     timestamp_seconds = int(timestamp)
-    timestamp_fraction = int((timestamp - int(timestamp)) *
-                             ALL_BITS_MASK)  # 32bit fraction of the second
+    # 32-bit fraction of the second
+    timestamp_fraction = int((timestamp - int(timestamp)) * _32_BIT_MASK)
 
     logging.debug('NTP Timestamp: {sec} seconds, {fraction} fractional seconds'
                   .format(sec=timestamp_seconds, fraction=timestamp_fraction))
@@ -190,7 +194,7 @@ def get_timestamp_ptp():
     """
 
     logging.debug('PTP Timestamp requested')
-    
+
     raise NotImplementedError
 
 
