@@ -633,8 +633,10 @@ class Controller:
          reused for other STAMP Sessions
     stamp_nodes : dict
         Map the node identifier to the STAMPNode instanc
-    self.stamp_sessions : dict
+    stamp_sessions : dict
         Map the SSID to the corresponding STAMPSession object
+    debug : bool
+        Whether to enable or not debug mode.
 
     Methods
     -------
@@ -688,11 +690,18 @@ class Controller:
          identified by the SSID.
     """
 
-    def __init__(self):
+    def __init__(self, debug=False):
         """
         Constructs all the necessary attributes for the Controller object.
+
+        Parameters
+        ----------
+        debug : bool, optional
+            Define whether to enable or not the debug mode (default: False).
         """
 
+        # Debug mode
+        self.debug = debug
         # Last used STAMP Session Identifier (SSID)
         self.last_ssid = -1
         # Pool of SSID allocated to STAMP Sessions terminated
@@ -702,6 +711,11 @@ class Controller:
         self.stamp_nodes = dict()
         # STAMP Sessions
         self.stamp_sessions = dict()
+        # Set logging
+        if self.debug:
+            logger.setLevel(level=logging.DEBUG)
+        else:
+            logger.setLevel(level=logging.INFO)
 
     def add_stamp_sender(self, node_id, grpc_ip, grpc_port, ip, udp_port=None,
                          interfaces=None, stamp_source_ipv6_address=None):
@@ -731,6 +745,13 @@ class Controller:
         NodeIdAlreadyExistsError
             If `node_id` is already used.
         """
+
+        logger.debug('Adding a new STAMP Sender:\n'
+                     'node_id=%s, grpc_ip=%s, grpc_port=%s, ip=%s, '
+                     'udp_port=%s, interfaces=%s, '
+                     'stamp_source_ipv6_address=%s', node_id, grpc_ip,
+                     grpc_port, ip, udp_port, interfaces,
+                     stamp_source_ipv6_address)
 
         # Check if node_id is already taken
         if self.stamp_nodes.get(node_id, None) is not None:
@@ -768,6 +789,13 @@ class Controller:
             If `node_id` is already used.
         """
 
+        logger.debug('Adding a new STAMP Reflector:\n'
+                     'node_id=%s, grpc_ip=%s, grpc_port=%s, ip=%s, '
+                     'udp_port=%s, interfaces=%s, '
+                     'stamp_source_ipv6_address=%s', node_id, grpc_ip,
+                     grpc_port, ip, udp_port, interfaces,
+                     stamp_source_ipv6_address)
+
         # Check if node_id is already taken
         if self.stamp_nodes.get(node_id, None) is not None:
             raise NodeIdAlreadyExistsError
@@ -800,24 +828,31 @@ class Controller:
             If node identified by `node_id` is not a STAMP Sender.
         """
 
+        logger.debug('Initializing STAMP Sender, node_id: %s', node_id)
+
         # Retrieve the node information from the dict of STAMP nodes
+        logger.debug('Checking if the node exists')
         node = self.stamp_nodes.get(node_id, None)
         if node is None:
             raise NodeIdNotFoundError
 
         # Check that the node is a STAMP Sender
+        logger.debug('Verifying if the node is a STAMP Sender')
         if not node.is_stamp_sender():
             raise NotAStampSenderError
 
         # Check if the node has been already initialized
+        logger.debug('Checking if node is initialized')
         if node.is_initialized:
             raise NodeInitializedError
 
         # Establish a gRPC connection to the Sender
+        logger.debug('Establish a gRPC connection to the STAMP Sender')
         channel, stub = get_grpc_channel_sender(ip=node.grpc_ip,
                                                 port=node.grpc_port)
 
         # Prepare the gRPC request message
+        logger.debug('Preparing the gRPC request message')
         request = stamp_sender_pb2.InitStampSenderRequest()
         request.sender_udp_port = node.udp_port
         request.interfaces.extend(node.interfaces)
@@ -825,6 +860,7 @@ class Controller:
             request.stamp_source_ipv6_address = node.stamp_source_ipv6_address
 
         # Invoke the Init RPC
+        logger.debug('Sending the Init request on the gRPC Channel')
         reply = stub.Init(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot init Sender: %s', reply.description)
@@ -840,6 +876,8 @@ class Controller:
 
         # Mark the node as initialized
         node.is_initialized = True
+
+        logger.debug('Init operation completed successfully')
 
     def init_reflector(self, node_id):
         """
@@ -862,24 +900,31 @@ class Controller:
             If node identified by `node_id` is not a STAMP Reflector.
         """
 
+        logger.debug('Initializing STAMP Reflector, node_id: %s', node_id)
+
         # Retrieve the node information from the dict of STAMP nodes
+        logger.debug('Checking if the node exists')
         node = self.stamp_nodes.get(node_id, None)
         if node is None:
             raise NodeIdNotFoundError
 
         # Check that the node is a STAMP Reflector
+        logger.debug('Verifying if the node is a STAMP Reflector')
         if not node.is_stamp_reflector():
             raise NotAStampReflectorError
 
         # Check if the node has been already initialized
+        logger.debug('Checking if node is initialized')
         if node.is_initialized:
             raise NodeInitializedError
 
         # Establish a gRPC connection to the Reflector
+        logger.debug('Establish a gRPC connection to the STAMP Reflector')
         channel, stub = get_grpc_channel_reflector(ip=node.grpc_ip,
                                                    port=node.grpc_port)
 
         # Prepare the gRPC request message
+        logger.debug('Preparing the gRPC request message')
         request = stamp_reflector_pb2.InitStampReflectorRequest()
         request.reflector_udp_port = node.udp_port
         request.interfaces.extend(node.interfaces)
@@ -887,6 +932,7 @@ class Controller:
             request.stamp_source_ipv6_address = node.stamp_source_ipv6_address
 
         # Invoke Init RPC
+        logger.debug('Sending the Init request on the gRPC Channel')
         reply = stub.Init(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot init Reflector: %s', reply.description)
@@ -902,6 +948,8 @@ class Controller:
 
         # Mark the node as initialized
         node.is_initialized = True
+
+        logger.debug('Init operation completed successfully')
 
     def init_stamp_node(self, node_id):
         """
@@ -927,18 +975,26 @@ class Controller:
             If node is neither a STAMP Sender nor a STAMP Reflector.
         """
 
+        logger.debug('Initializing STAMP node')
+
         # Retrieve the node information from the dict of STAMP nodes
+        logger.debug('Checking if node exists')
         node = self.stamp_nodes.get(node_id, None)
         if node is None:
+            logger.error('STAMP node not found')
             raise NodeIdNotFoundError
 
         # Check if the node is a STAMP Sender or a STAMP Reflector
+        logger.debug('Detecting node type')
         if node.is_stamp_sender():
+            logger.debug('Node is a STAMP Sender')
             return self.init_sender(node_id)
         if node.is_stamp_reflector():
+            logger.debug('Node is a STAMP Reflector')
             return self.init_reflector(node_id)
 
         # Node is neither a sender nor a reflector
+        logger.error('Node is invalid')
         raise InvalidStampNodeError
 
     def reset_stamp_sender(self, node_id):
@@ -954,23 +1010,33 @@ class Controller:
         None
         """
 
+        logger.debug('Reset STAMP Sender requested, node_id: %s', node_id)
+
         # Retrieve the node information from the dict of STAMP nodes
+        logger.debug('Retrieving node information')
         node = self.stamp_nodes.get(node_id, None)
         if node is None:
+            logger.error('Node %s not found', node_id)
             raise NodeIdNotFoundError
 
         # Check that the node is a STAMP Sender
+        logger.debug('Checking if node is a STAMP Sender')
         if not node.is_stamp_sender():
+            logger.error('Node %s is not a STAMP Sender', node_id)
             raise NotAStampSenderError
 
         # Check if the node has been initialized
+        logger.debug('Checking if node has been initialized')
         if not node.is_initialized:
+            logger.error('Cannot reset a uninitialized node')
             raise NodeNotInitializedError
 
         # Prepare the request message
+        logger.debug('Preparing gRPC request message')
         request = stamp_sender_pb2.ResetStampSenderRequest()
 
         # Invoke the Reset RPC
+        logger.debug('Invoking the Reset() RPC')
         reply = node.grpc_stub.Reset(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot reset STAMP Node: %s', reply.description)
@@ -984,6 +1050,8 @@ class Controller:
 
         # Mark the node as not initialized
         node.is_initialized = False
+
+        logger.debug('Reset() RPC completed successfully')
 
     def reset_stamp_reflector(self, node_id):
         """
@@ -998,23 +1066,33 @@ class Controller:
         None
         """
 
+        logger.debug('Reset STAMP Reflector requested, node_id: %s', node_id)
+
         # Retrieve the node information from the dict of STAMP nodes
+        logger.debug('Retrieving node information')
         node = self.stamp_nodes.get(node_id, None)
         if node is None:
+            logger.error('Node %s not found', node_id)
             raise NodeIdNotFoundError
 
-        # Check that the node is a STAMP Sender
+        # Check that the node is a STAMP Reflector
+        logger.debug('Checking if node is a STAMP Reflector')
         if not node.is_stamp_reflector():
+            logger.error('Node %s is not a STAMP Reflector', node_id)
             raise NotAStampReflectorError
 
         # Check if the node has been initialized
+        logger.debug('Checking if node has been initialized')
         if not node.is_initialized:
+            logger.error('Cannot reset a uninitialized node')
             raise NodeNotInitializedError
 
         # Prepare the request message
+        logger.debug('Preparing gRPC request message')
         request = stamp_reflector_pb2.ResetStampReflectorRequest()
 
         # Invoke the Reset RPC
+        logger.debug('Invoking the Reset() RPC')
         reply = node.grpc_stub.Reset(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot reset STAMP Node: %s', reply.description)
@@ -1028,6 +1106,8 @@ class Controller:
 
         # Mark the node as not initialized
         node.is_initialized = False
+
+        logger.debug('Reset() RPC completed successfully')
 
     def reset_stamp_node(self, node_id):
         """
@@ -1051,16 +1131,23 @@ class Controller:
             If node is neither a STAMP Sender nor a STAMP Reflector.
         """
 
+        logger.debug('Resetting STAMP node')
+
         # Retrieve the node information from the dict of STAMP nodes
+        logger.debug('Checking if node exists')
         node = self.stamp_nodes.get(node_id, None)
         if node is None:
+            logger.error('STAMP node not found')
             raise NodeIdNotFoundError
 
         # Check if the node is a STAMP Sender or a STAMP Reflector
         # and send reset command
+        logger.debug('Detecting node type')
         if node.is_stamp_sender():
+            logger.debug('Node is a STAMP Sender')
             return self.reset_stamp_sender(node_id)
         if node.is_stamp_reflector():
+            logger.debug('Node is a STAMP Reflector')
             return self.reset_stamp_reflector(node_id)
 
         # Node is neither a sender nor a reflector
@@ -1120,6 +1207,7 @@ class Controller:
         """
 
         # Create a request message
+        logger.debug('Preparing gRPC request message')
         request = stamp_sender_pb2.CreateStampSenderSessionRequest()
 
         # Fill the request message
@@ -1148,6 +1236,7 @@ class Controller:
                 py_to_grpc(DelayMeasurementMode, delay_measurement_mode)
 
         # Invoke the RPC
+        logger.debug('Invoke the CreateStampSession() RPC on STAMP Sender')
         reply = sender.grpc_stub.CreateStampSession(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot create STAMP Session: %s', reply.description)
@@ -1155,6 +1244,7 @@ class Controller:
             raise CreateSTAMPSessionError(reply.description)
 
         # Return the reply
+        logger.debug('CreateStampSession() RPC completed successfully')
         return reply
 
     def _create_stamp_reflector_session(self, ssid, sender, reflector,
@@ -1205,6 +1295,7 @@ class Controller:
         """
 
         # Create a request message
+        logger.debug('Preparing gRPC request message')
         request = stamp_reflector_pb2.CreateStampReflectorSessionRequest()
 
         # Fill the request message
@@ -1228,6 +1319,7 @@ class Controller:
                 py_to_grpc(SessionReflectorMode, session_reflector_mode)
 
         # Invoke the RPC
+        logger.debug('Invoke the CreateStampSession() RPC on STAMP Reflector')
         reply = reflector.grpc_stub.CreateStampSession(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error('Cannot create STAMP Session: %s', reply.description)
@@ -1235,6 +1327,7 @@ class Controller:
             raise CreateSTAMPSessionError(reply.description)
 
         # Return the reply
+        logger.debug('CreateStampSession() RPC completed successfully')
         return reply
 
     def create_stamp_session(self, sender_id, reflector_id=None, sidlist=[],
@@ -1313,6 +1406,8 @@ class Controller:
             The SSID allocated to the STAMP Session.
         """
 
+        logger.debug('Create STAMP Session operation requested')
+
         # Check if the STAMP Sender exists
         sender = self.stamp_nodes.get(sender_id, None)
         if sender is None:
@@ -1348,6 +1443,7 @@ class Controller:
             self.last_ssid += 1
 
         # Create STAMP Session on the Sender
+        logger.debug('Create STAMP Session on STAMP Sender')
         sender_reply = self._create_stamp_sender_session(
             ssid=ssid, sender=sender, reflector=reflector,
             sidlist=sidlist, interval=interval, auth_mode=auth_mode,
@@ -1358,6 +1454,7 @@ class Controller:
 
         # Create STAMP Session on the Reflector
         if reflector is not None:
+            logger.debug('Create STAMP Session on STAMP Reflector')
             reflector_reply = self._create_stamp_reflector_session(
                 ssid=ssid, sender=sender, reflector=reflector,
                 return_sidlist=return_sidlist, auth_mode=auth_mode,
@@ -1421,6 +1518,7 @@ class Controller:
         self.stamp_sessions[ssid] = stamp_session
 
         # Return the SSID allocated for the STAMP session
+        logger.debug('STAMP Session created successfully, ssid: %d', ssid)
         return ssid
 
     def start_stamp_session(self, ssid):
@@ -1437,6 +1535,8 @@ class Controller:
         None
         """
 
+        logger.debug('Starting STAMP Session, ssid: %d', ssid)
+
         # Get STAMP Session; if it does not exist, return an error
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
@@ -1445,6 +1545,7 @@ class Controller:
 
         # Start STAMP Session on the Reflector, if any
         if stamp_session.reflector is not None:
+            logger.debug('Starting STAMP Session on Reflector')
             request = stamp_reflector_pb2.StartStampReflectorSessionRequest()
             request.ssid = ssid
             reply = stamp_session.reflector.grpc_stub.StartStampSession(
@@ -1457,6 +1558,7 @@ class Controller:
                 raise StartSTAMPSessionError(reply.description)
 
         # Start STAMP Session on the Sender
+        logger.debug('Starting STAMP Session on Sender')
         request = stamp_sender_pb2.StartStampSenderSessionRequest()
         request.ssid = ssid
         reply = stamp_session.sender.grpc_stub.StartStampSession(request)
@@ -1465,6 +1567,8 @@ class Controller:
                 'Cannot start STAMP Session on Sender: %s', reply.description)
             # Raise an exception
             raise StartSTAMPSessionError(reply.description)
+
+        logger.debug('STAMP Session started successfully')
 
     def stop_stamp_session(self, ssid):
         """
@@ -1480,6 +1584,8 @@ class Controller:
         None
         """
 
+        logger.debug('Stopping STAMP Session, ssid: %d', ssid)
+
         # Get STAMP Session; if it does not exist, return an error
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
@@ -1488,6 +1594,7 @@ class Controller:
 
         # Stop STAMP Session on the Reflector, if any
         if stamp_session.reflector is not None:
+            logger.debug('Stopping STAMP Session on Reflector')
             request = stamp_reflector_pb2.StopStampReflectorSessionRequest()
             request.ssid = ssid
             reply = stamp_session.reflector.grpc_stub.StopStampSession(request)
@@ -1499,6 +1606,7 @@ class Controller:
                 raise StopSTAMPSessionError(reply.description)
 
         # Stop STAMP Session on the Sender
+        logger.debug('Stopping STAMP Session on Sender')
         request = stamp_sender_pb2.StopStampSenderSessionRequest()
         request.ssid = ssid
         reply = stamp_session.sender.grpc_stub.StopStampSession(request)
@@ -1507,6 +1615,8 @@ class Controller:
                 'Cannot stop STAMP Session on Sender: %s', reply.description)
             # Raise an exception
             raise StopSTAMPSessionError(reply.description)
+
+        logger.debug('STAMP Session stopped successfully')
 
     def destroy_stamp_session(self, ssid):
         """
@@ -1522,6 +1632,8 @@ class Controller:
         None
         """
 
+        logger.debug('Destroying STAMP Session, ssid: %d', ssid)
+
         # Get STAMP Session; if it does not exist, return an error
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
@@ -1530,6 +1642,7 @@ class Controller:
 
         # Destroy STAMP Session on the Reflector, if any
         if stamp_session.reflector is not None:
+            logger.debug('Destroying STAMP Session on Reflector')
             request = stamp_reflector_pb2.DestroyStampReflectorSessionRequest()
             request.ssid = ssid
             reply = stamp_session.reflector.grpc_stub.DestroyStampSession(
@@ -1542,6 +1655,7 @@ class Controller:
                 raise DestroySTAMPSessionError(reply.description)
 
         # Destroy STAMP Session on the Sender
+        logger.debug('Destroying STAMP Session on Sender')
         request = stamp_sender_pb2.DestroyStampSenderSessionRequest()
         request.ssid = ssid
         reply = stamp_session.sender.grpc_stub.DestroyStampSession(request)
@@ -1553,6 +1667,8 @@ class Controller:
             raise DestroySTAMPSessionError(reply.description)
 
         del self.stamp_sessions[ssid]
+
+        logger.debug('STAMP Session destroyed successfully')
 
     def collect_stamp_results(self, ssid):
         """
@@ -1569,6 +1685,8 @@ class Controller:
         None
         """
 
+        logger.debug('Collecting results for STAMP Session, ssid: %d', ssid)
+
         # Get STAMP Session; if it does not exist, return an error
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
@@ -1576,6 +1694,7 @@ class Controller:
             raise STAMPSessionNotFoundError(ssid)
 
         # Get results of the STAMP Session
+        logger.debug('Collecting results from STAMP Sender')
         request = stamp_sender_pb2.GetStampSessionResultsRequest()
         request.ssid = ssid
         reply = stamp_session.sender.grpc_stub.GetStampSessionResults(request)
@@ -1585,6 +1704,8 @@ class Controller:
                 request.ssid, reply.description)
             # Raise an exception
             raise GetSTAMPResultsError(reply.description)
+
+        logger.debug('Got %f results', len(reply.results))
 
         # Iterate on each received result
         for res in reply.results:
@@ -1648,6 +1769,8 @@ class Controller:
             The mean delay of the return path (Reflector -> Sender).
         """
 
+        logger.debug('Get results for STAMP Session, ssid: %d', ssid)
+
         # Get STAMP Session; if it does not exist, return an error
         stamp_session = self.stamp_sessions.get(ssid, None)
         if stamp_session is None:
@@ -1680,11 +1803,14 @@ class Controller:
         None.
         """
 
+        logger.debug('Print results for STAMP Session, ssid: %d', ssid)
+
         # Get results from the controller inventory
         mean_delay_direct_path, mean_delay_return_path = \
             self.get_stamp_results(ssid, collect_results_from_stamp)
 
         # Print results
+        print()
         print()
         print('*** Results for STAMP Session {ssid} ***'.format(ssid=ssid))
         print('Mean delay for the direct path: {delay}'
