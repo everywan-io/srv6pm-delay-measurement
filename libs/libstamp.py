@@ -202,23 +202,31 @@ def reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction):
     """
     Take seconds and fractional seconds and return the NTPv4 timestamp.
 
-
     Parameters
     ----------
     timestamp_sec : int
         Seconds expressed as 32-bit unsigned int (spanning 136 years).
-    timestamp_msec : int
+    timestamp_fraction : int
         Fraction of second expressed as 32-bit unsigned int (resolving 232
          picoseconds).
 
     Returns
     -------
-    packet : float
-        The NTPv4 Timestamp.
+    timestamp : float
+        The reassembled NTPv4 Timestamp.
     """
 
-    return timestamp_seconds + \
+    timestamp = timestamp_seconds + \
         float('0.{fraction}'.format(fraction=timestamp_fraction))
+
+    logging.debug('Reassembling NTP Timestamp, seconds: {seconds}, '
+                  'fraction: {fraction}, reassembled timestamp: {timestamp}'
+                  .format(
+                      seconds=timestamp_seconds,
+                      fraction=timestamp_fraction,
+                      timestamp=timestamp))
+
+    return timestamp
 
 
 def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
