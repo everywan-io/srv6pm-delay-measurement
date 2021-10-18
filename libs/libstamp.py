@@ -79,45 +79,45 @@ UNIX_TO_NTP_TIMESTAMP_OFFSET = int(2208988800)  # 1-JAN-1900 to 1-JAN-1970
 _32_BIT_MASK = int(0xFFFFFFFF)     # To calculate 32bit fraction of the second
 
 
-class STAMPTestPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
-    name = "TWAMPPacketSender"
-    fields_desc = [IntField("seq_num", 0),
-                   BitField("first_part_timestamp", 0, 32),
-                   BitField("second_part_timestamp", 0, 32),
-                   BitEnumField("S", 0, 1, {0: "no external synchronization",
-                                            1: "external synchronization"}),
-                   BitField("Z", 0, 1),
-                   BitField("scale", 0, 6),
-                   BitField("multiplier", 1, 8),
-                   ShortField("ssid", 0),
-                   NBytesField("mbz", 0, 28)]  # 28 bytes MBZ
+class STAMPTestPacket(Packet):
+    name = 'STAMPTestPacket'
+    fields_desc = [IntField('seq_num', 0),
+                   BitField('first_part_timestamp', 0, 32),
+                   BitField('second_part_timestamp', 0, 32),
+                   BitEnumField('S', 0, 1, {0: 'no external synchronization',
+                                            1: 'external synchronization'}),
+                   BitField('Z', 0, 1),
+                   BitField('scale', 0, 6),
+                   BitField('multiplier', 1, 8),
+                   ShortField('ssid', 0),
+                   NBytesField('mbz', 0, 28)]  # 28 bytes MBZ
 
 
-class STAMPReplyPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
-    name = "TWAMPPacketReflector"
-    fields_desc = [IntField("seq_num", 0),
-                   BitField("first_part_timestamp", 0, 32),
-                   BitField("second_part_timestamp", 0, 32),
-                   BitEnumField("S", 0, 1, {0: "no external synchronization",
-                                            1: "external synchronization"}),
-                   BitField("Z", 0, 1),
-                   BitField("scale", 0, 6),
-                   BitField("multiplier", 1, 8),
-                   ShortField("ssid", 0),
-                   BitField("first_part_timestamp_receiver", 0, 32),
-                   BitField("second_part_timestamp_receiver", 0, 32),
-                   IntField("seq_num_sender", 0),
-                   BitField("first_part_timestamp_sender", 0, 32),
-                   BitField("second_part_timestamp_sender", 0, 32),
-                   BitEnumField("S_sender", 0, 1, {
-                       0: "no external synchronization",
-                       1: "external synchronization"}),
-                   BitField("Z_sender", 0, 1),
-                   BitField("scale_sender", 0, 6),
-                   BitField("multiplier_sender", 1, 8),
-                   BitField("mbz", 0, 16),
-                   ByteField("sender_ttl", 255),
-                   NBytesField("mbz", 0, 3)]  # 3 bytes MBZ
+class STAMPReplyPacket(Packet):
+    name = 'STAMPReplyPacket'
+    fields_desc = [IntField('seq_num', 0),
+                   BitField('first_part_timestamp', 0, 32),
+                   BitField('second_part_timestamp', 0, 32),
+                   BitEnumField('S', 0, 1, {0: 'no external synchronization',
+                                            1: 'external synchronization'}),
+                   BitField('Z', 0, 1),
+                   BitField('scale', 0, 6),
+                   BitField('multiplier', 1, 8),
+                   ShortField('ssid', 0),
+                   BitField('first_part_timestamp_receiver', 0, 32),
+                   BitField('second_part_timestamp_receiver', 0, 32),
+                   IntField('seq_num_sender', 0),
+                   BitField('first_part_timestamp_sender', 0, 32),
+                   BitField('second_part_timestamp_sender', 0, 32),
+                   BitEnumField('S_sender', 0, 1, {
+                       0: 'no external synchronization',
+                       1: 'external synchronization'}),
+                   BitField('Z_sender', 0, 1),
+                   BitField('scale_sender', 0, 6),
+                   BitField('multiplier_sender', 1, 8),
+                   BitField('mbz', 0, 16),
+                   ByteField('sender_ttl', 255),
+                   NBytesField('mbz', 0, 3)]  # 3 bytes MBZ
 
 
 # Enum used by STAMP Sender and STAMP Reflector
