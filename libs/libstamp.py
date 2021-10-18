@@ -74,45 +74,6 @@ ALL_BITS_MASK = int(0xFFFFFFFF)     # To calculate 32bit fraction of the second
 ALL_BITS_MASK_PTP = 10**9     # To calculate fraction of the second for PTP
 # TODO migliorare nomi costanti
 
-"""
-class STAMPTestPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
-    name = "TWAMPPacketSender"
-    fields_desc = [IntField("SequenceNumber", 0),
-                   BitField("FirstPartTimestamp", 0, 32),
-                   BitField("SecondPartTimestamp", 0, 32),
-                   BitEnumField("S", 0, 1, {0: " no external synchronization",
-                                            1: "external synchronization"}),
-                   BitField("Z", 0, 1),
-                   BitField("Scale", 0, 6),
-                   BitField("Multiplier", 1, 8)]  # TODO manca il padding
-
-
-class STAMPReplyPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
-    name = "TWAMPPacketReflector"
-    fields_desc = [IntField("SequenceNumber", 0),
-                   BitField("FirstPartTimestamp", 0, 32),
-                   BitField("SecondPartTimestamp", 0, 32),
-                   BitEnumField("S", 0, 1, {0: " no external synchronization",
-                                            1: "external synchronization"}),
-                   BitField("Z", 0, 1),
-                   BitField("Scale", 0, 6),
-                   BitField("Multiplier", 1, 8),
-                   BitField("MBZ", 0, 16),
-                   BitField("FirstPartTimestampReceiver", 0, 32),
-                   BitField("SecondPartTimestampReceiver", 0, 32),
-                   IntField("SequenceNumberSender", 0),
-                   BitField("FirstPartTimestampSender", 0, 32),
-                   BitField("SecondPartTimestampSender", 0, 32),
-                   BitEnumField("SSender", 0, 1, {
-                       0: " no external synchronization",
-                       1: "external synchronization"}),
-                   BitField("ZSender ", 0, 1),
-                   BitField("ScaleSender", 0, 6),
-                   BitField("MultiplierSender", 1, 8),
-                   BitField("MBZ", 0, 16),
-                   ByteField("SenderTTL", 255)]  # TODO manca il padding
-"""  # TODO lasciare o togliere?
-
 
 class STAMPTestPacket(Packet):       # TODO Rivedere nomi classi e nomi campi
     name = "TWAMPPacketSender"
