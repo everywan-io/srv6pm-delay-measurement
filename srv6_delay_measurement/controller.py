@@ -1662,7 +1662,7 @@ class Controller:
         return (stamp_session.stamp_session_direct_path_results.mean_delay,
                 stamp_session.stamp_session_return_path_results.mean_delay)
 
-    def print_stamp_results(self, ssid, collect_results_from_stamp):
+    def print_stamp_results(self, ssid, collect_results_from_stamp=False):
         """
         Print the results stored in the controller.
 
