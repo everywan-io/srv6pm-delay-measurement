@@ -417,10 +417,9 @@ def generate_stamp_test_packet(
 
 def generate_stamp_reply_packet(
         stamp_test_packet, src_ip, dst_ip,
-        src_udp_port, dst_udp_port, sidlist, ssid, sequence_number,
+        src_udp_port, dst_udp_port, sidlist, ssid, sequence_number=None,
         timestamp_format=TimestampFormat.TIMESTAMP_FORMAT_NTP.value,
-        ext_source_sync=False, scale=0, multiplier=1,
-        sender_sequence_number=None):
+        ext_source_sync=False, scale=0, multiplier=1):
     """
     Generate a STAMP Test Reply packet.
 
@@ -442,8 +441,11 @@ def generate_stamp_reply_packet(
         Segment List to be used for the STAMP packet.
     ssid : int
         STAMP Session Sender Identifier.
-    sequence_number : int
-        Sequence Number of the STAMP Test Reply packet.
+    sequence_number : int, optional
+        Sequence Number to use in the STAMP Test Reply packet. If None, the
+         Sequence Number field is the same of the Sequence Number of the STAMP
+         Test Packet received. This is useful to implement STAMP Reflector
+         Stateless Mode (default None).
     timestamp_format : str, optional
         Format of the timestamp to be used for the STAMP Test Reply packet.
          Two timestamp formats are supported by STAMP: "ntp" and "ptp"
@@ -455,11 +457,6 @@ def generate_stamp_reply_packet(
         Scale field of the Error Estimate field (default 0).
     multiplier: int, optional
         Multiplier field of the Error Estimate field (default 1).
-    sender_sequence_number : int, optional
-        Sequence Number to use in the STAMP Test Reply packet. If None, the
-         Sequence Number field is the same of the Sequence Number of the STAMP
-         Test Packet received. This is useful to implement STAMP Reflector
-         Stateless Mode (default None).
 
     Returns
     -------
@@ -472,11 +469,11 @@ def generate_stamp_reply_packet(
 
     # Get the timestamp depending on the timestamp format
     if timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_NTP.value:
-        timestamp = get_timestamp_ntp()
         timestamp_format_flag = TimestampFormatFlag.NTP_v4.value
+        timestamp = get_timestamp_ntp()
     elif timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_PTPv2.value:
-        timestamp = get_timestamp_ptp()
         timestamp_format_flag = TimestampFormatFlag.PTP_V2.value
+        timestamp = get_timestamp_ptp()
 
     # Translate external source sync
     if ext_source_sync:
@@ -485,16 +482,24 @@ def generate_stamp_reply_packet(
         sync_flag = SyncFlag.NO_EXT_SYNC.value
 
     # If the Sender sequence number argument has not been provided, we extract
-    # the sequence number from the STAMP Test packet sent by the Sender and we
-    # use it in the STAMP Test Reply packet
-    # This is useful to implement the STAMP Stateless Mode.
-    if sender_sequence_number is None:
-        sender_sequence_number = parsed_stamp_test_packet.sequence_number
+    # the sequence number from the STAMP Test packet received from the Sender
+    # and we use it in as sequence number in the STAMP Test Reply packet.
+    # If a Sequence Number has been passed as argument to this function, it
+    # will be used as Sequence Number in the STAMP Reply packet.
+    #
+    # This approach is useful to implement the two Session Reflector Modes
+    # described in RFC8762:
+    #     * Stateless Mode: the STAMP Test Reply uses the same Sequence Number
+    #       as the STAMP Test packet
+    #     * Stateful Mode: the STAMP Reflector maintains its own Sequence
+    #       Number as part of its STAMP Session state
+    if sequence_number is None:
+        sequence_number = parsed_stamp_test_packet.sequence_number
 
     # Build IPv6 header
     ipv6_header = IPv6()
     ipv6_header.src = src_ip
-    ipv6_header.dst = sidlist[0]  # dst_ip
+    ipv6_header.dst = sidlist[0]
 
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
@@ -519,7 +524,7 @@ def generate_stamp_reply_packet(
         MBZ=0,
         FirstPartTimestampReceiver=timestamp.seconds,
         SecondPartTimestampReceiver=timestamp.fraction,
-        SequenceNumberSender=sender_sequence_number,
+        SequenceNumberSender=parsed_stamp_test_packet.sequence_number,
         FirstPartTimestampSender=parsed_stamp_test_packet.timestamp_seconds,
         SecondPartTimestampSender=parsed_stamp_test_packet.timestamp_fraction,
         SSender=parsed_stamp_test_packet.s_flag,
@@ -530,7 +535,7 @@ def generate_stamp_reply_packet(
     )
 
     # Assemble the whole packet
-    packet = (ipv6_header / srv6_header / udp_header / stamp_packet)
+    packet = ipv6_header / srv6_header / udp_header / stamp_packet
 
     # Return the packet
     return packet
