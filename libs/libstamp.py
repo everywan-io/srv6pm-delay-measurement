@@ -530,7 +530,7 @@ def generate_stamp_reply_packet(
         second_part_timestamp_receiver=timestamp.fraction,
         seq_num_sender=parsed_stamp_test_packet.sequence_number,
         first_part_timestamp_sender=parsed_stamp_test_packet.timestamp_seconds,
-        second_part_timestamp_sender=parsed_stamp_test_packet.timestamp_fraction,
+        second_part_timestamp_sender=parsed_stamp_test_packet.timestamp_fraction,  # noqa: E501
         S_sender=parsed_stamp_test_packet.s_flag,
         Z_sender=parsed_stamp_test_packet.z_flag,
         scale_sender=parsed_stamp_test_packet.scale,
@@ -709,10 +709,3 @@ def send_stamp_packet(packet, socket=None):
         send(packet, verbose=0)
 
     logging.debug('Packet sent')
-
-
-# TODO ottimizzare pacchetto
-
-# TODO aggiungere srv6 e ssid al pkt
-
-# TODO inline o encap?
