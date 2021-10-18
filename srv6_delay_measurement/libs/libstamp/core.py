@@ -665,23 +665,23 @@ def parse_stamp_reply_packet(packet):
             ntp_to_unix_timestamp(timestamp_seconds, timestamp_fraction)
         receive_timestamp = \
             ntp_to_unix_timestamp(receive_timestamp_seconds,
-                                     receive_timestamp_fraction)
+                                  receive_timestamp_fraction)
     elif z_flag == TimestampFormatFlag.PTP_V2.value:
         timestamp = \
             ptp_to_unix_timestamp(timestamp_seconds, timestamp_fraction)
         receive_timestamp = \
             ptp_to_unix_timestamp(receive_timestamp_seconds,
-                                     receive_timestamp_fraction)
+                                  receive_timestamp_fraction)
 
     # Decode Sender Timestamp
     if z_flag_sender == TimestampFormatFlag.NTP_v4.value:
         sender_timestamp = \
             ntp_to_unix_timestamp(sender_timestamp_seconds,
-                                     sender_timestamp_fraction)
+                                  sender_timestamp_fraction)
     elif z_flag_sender == TimestampFormatFlag.PTP_V2.value:
         sender_timestamp = \
             ptp_to_unix_timestamp(sender_timestamp_seconds,
-                                     sender_timestamp_fraction)
+                                  sender_timestamp_fraction)
 
     # Aggregate parsed information in a namedtuple
     parsed_packet = ParsedSTAMPTestReplyPacket(
