@@ -613,25 +613,47 @@ def parse_stamp_reply_packet(packet):
     ssid = packet[UDP].ssid
     timestamp_seconds = packet[UDP].FirstPartTimestamp
     timestamp_fraction = packet[UDP].SecondPartTimestamp
-    timestamp = reassemble_timestamp_ntp(
-        timestamp_seconds, timestamp_fraction)  # TODO dipende dal z flag
     s_flag = packet[UDP].S
     z_flag = packet[UDP].Z
     scale = packet[UDP].Scale
     multiplier = packet[UDP].Multiplier
     receive_timestamp_seconds = packet[UDP].FirstPartTimestampReceiver
     receive_timestamp_fraction = packet[UDP].SecondPartTimestampReceiver
-    receive_timestamp = reassemble_timestamp_ntp(
-        receive_timestamp_seconds, receive_timestamp_fraction)   # TODO dipende dal z flag
     sender_timestamp_seconds = packet[UDP].FirstPartTimestampSender
     sender_timestamp_fraction = packet[UDP].SecondPartTimestampSender
-    sender_timestamp = reassemble_timestamp_ntp(
-        sender_timestamp_seconds, sender_timestamp_fraction)   # TODO dipende dal z flag
     s_flag_sender = packet[UDP].SSender
     z_flag_sender = packet[UDP].ZSender
     scale_sender = packet[UDP].ScaleSender
     multiplier_sender = packet[UDP].MultiplierSender
     ttl_sender = packet[UDP].SenderTTL
+
+    # Decode Timestamp seconds and fraction and reassemble them into Timestamp
+    # Timestamp decoding depends on the Timestamp Format which has been used
+    # to encode the Timestamp.
+
+    # Decode Timestamp and Receive Timestamp
+    if z_flag == TimestampFormatFlag.NTP_v4.value:
+        timestamp = \
+            reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction)
+        receive_timestamp = \
+            reassemble_timestamp_ntp(receive_timestamp_seconds,
+                                     receive_timestamp_fraction)
+    elif z_flag == TimestampFormatFlag.PTP_V2.value:
+        timestamp = \
+            reassemble_timestamp_ptp(timestamp_seconds, timestamp_fraction)
+        receive_timestamp = \
+            reassemble_timestamp_ptp(receive_timestamp_seconds,
+                                     receive_timestamp_fraction)
+
+    # Decode Sender Timestamp
+    if z_flag_sender == TimestampFormatFlag.NTP_v4.value:
+        sender_timestamp = \
+            reassemble_timestamp_ntp(sender_timestamp_seconds,
+                                     sender_timestamp_fraction)
+    elif z_flag_sender == TimestampFormatFlag.PTP_V2.value:
+        sender_timestamp = \
+            reassemble_timestamp_ptp(sender_timestamp_seconds,
+                                     sender_timestamp_fraction)
 
     # Aggregate parsed information in a namedtuple
     parsed_packet = StampTestReplyPacket(
