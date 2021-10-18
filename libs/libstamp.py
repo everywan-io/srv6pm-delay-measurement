@@ -35,7 +35,12 @@ from collections import namedtuple
 from datetime import datetime
 
 from scapy.all import send
-from scapy.fields import BitEnumField, BitField, ByteField, IntField, ShortField
+from scapy.fields import (
+    BitEnumField,
+    BitField,
+    ByteField,
+    IntField,
+    ShortField)
 from scapy.layers.inet import UDP
 from scapy.layers.inet6 import IPv6, IPv6ExtHdrSegmentRouting
 from scapy.packet import Packet
@@ -43,13 +48,21 @@ from scapy.packet import Packet
 
 Timestamp = namedtuple('Timestamp', 'seconds fraction')
 
-StampTestPacket = namedtuple('StampTestPacket', 'src_ip dst_ip src_udp_port dst_udp_port sequence_number ssid '
-                             'timestamp timestamp_seconds timestamp_fraction s_flag z_flag scale multiplier')
+StampTestPacket = namedtuple('StampTestPacket',
+                             'src_ip dst_ip src_udp_port dst_udp_port '
+                             'sequence_number ssid timestamp '
+                             'timestamp_seconds timestamp_fraction s_flag '
+                             'z_flag scale multiplier')
 
-StampTestReplyPacket = namedtuple('StampTestReplyPacket', 'sequence_number '
-                                  'ssid timestamp timestamp_seconds timestamp_fraction s_flag z_flag scale '
-                                  'multiplier receive_timestamp receive_timestamp_seconds receive_timestamp_fraction '
-                                  'sender_timestamp sender_timestamp_seconds sender_timestamp_fraction s_flag_sender '
+StampTestReplyPacket = namedtuple('StampTestReplyPacket',
+                                  'sequence_number ssid timestamp '
+                                  'timestamp_seconds timestamp_fraction '
+                                  's_flag z_flag scale multiplier '
+                                  'receive_timestamp '
+                                  'receive_timestamp_seconds '
+                                  'receive_timestamp_fraction '
+                                  'sender_timestamp sender_timestamp_seconds '
+                                  'sender_timestamp_fraction s_flag_sender '
                                   'z_flag_sender scale_sender '
                                   'multiplier_sender ttl_sender')
 
@@ -248,7 +261,8 @@ def reassemble_timestamp_ntp(timestamp_seconds, timestamp_fraction):
 
 def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
                                sidlist, ssid, sequence_number,
-                               timestamp_format='TIMESTAMP_FORMAT_NTP', ext_source_sync=False,
+                               timestamp_format='TIMESTAMP_FORMAT_NTP',
+                               ext_source_sync=False,
                                scale=0, multiplier=1):
     """
     Generate a STAMP Test packet.
@@ -336,7 +350,8 @@ def generate_stamp_test_packet(src_ip, dst_ip, src_udp_port, dst_udp_port,
 
 def generate_stamp_reply_packet(stamp_test_packet, src_ip, dst_ip,
                                 src_udp_port, dst_udp_port, sidlist,
-                                ssid, sequence_number, timestamp_format='TIMESTAMP_FORMAT_NTP',
+                                ssid, sequence_number,
+                                timestamp_format='TIMESTAMP_FORMAT_NTP',
                                 ext_source_sync=False, scale=0, multiplier=1,
                                 sender_sequence_number=None):
     """
@@ -549,23 +564,20 @@ def parse_stamp_reply_packet(packet):
     ttl_sender = packet[UDP].SenderTTL
 
     # Aggregate parsed information in a namedtuple
-    parsed_packet = StampTestReplyPacket(sequence_number=sequence_number,
-                                         ssid=ssid, timestamp=timestamp,
-                                         timestamp_seconds=timestamp_seconds,
-                                         timestamp_fraction=timestamp_fraction,
-                                         s_flag=s_flag, z_flag=z_flag,
-                                         scale=scale, multiplier=multiplier,
-                                         receive_timestamp=receive_timestamp,
-                                         sender_timestamp=sender_timestamp,
-                                         receive_timestamp_seconds=receive_timestamp_seconds,
-                                         receive_timestamp_fraction=receive_timestamp_fraction,
-                                         sender_timestamp_seconds=sender_timestamp_seconds,
-                                         sender_timestamp_fraction=sender_timestamp_fraction,
-                                         s_flag_sender=s_flag_sender,
-                                         z_flag_sender=z_flag_sender,
-                                         scale_sender=scale_sender,
-                                         multiplier_sender=multiplier_sender,
-                                         ttl_sender=ttl_sender)
+    parsed_packet = StampTestReplyPacket(
+        sequence_number=sequence_number, ssid=ssid, timestamp=timestamp,
+        timestamp_seconds=timestamp_seconds,
+        timestamp_fraction=timestamp_fraction, s_flag=s_flag, z_flag=z_flag,
+        scale=scale, multiplier=multiplier,
+        receive_timestamp=receive_timestamp,
+        sender_timestamp=sender_timestamp,
+        receive_timestamp_seconds=receive_timestamp_seconds,
+        receive_timestamp_fraction=receive_timestamp_fraction,
+        sender_timestamp_seconds=sender_timestamp_seconds,
+        sender_timestamp_fraction=sender_timestamp_fraction,
+        s_flag_sender=s_flag_sender, z_flag_sender=z_flag_sender,
+        scale_sender=scale_sender, multiplier_sender=multiplier_sender,
+        ttl_sender=ttl_sender)
 
     # Return the parsed STAMP Test Reply packet
     return parsed_packet
