@@ -667,7 +667,7 @@ def send_stamp_packet(packet, socket=None):
     socket : scapy.arch.linux.SuperSocket, optional
         The socket on which the STAMP packet should be sent. If socket is
          None, this function will open a new socket, send the packets and close
-         the socket (default None)
+         the socket (default None).
 
     Returns
     -------
@@ -676,13 +676,15 @@ def send_stamp_packet(packet, socket=None):
 
     # If a socket has been provided, we use the provided socket
     if socket is not None:
-        logging.debug('Sending packet %s', packet)
+        logging.debug('Sending packet %s, reusing opened socket', packet)
         socket.send(packet)
-        logging.debug('Packet sent')
     else:
         # Otherwise, we use the send() function, which will open a new socket
         # and close it after sending the packet
+        logging.debug('Sending packet %s, opening a new socket', packet)
         send(packet, verbose=0)
+
+    logging.debug('Packet sent')
 
 
 # TODO ottimizzare pacchetto
