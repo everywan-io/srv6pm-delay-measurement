@@ -369,11 +369,11 @@ def generate_stamp_test_packet(
 
     # Get the timestamp depending on the timestamp format
     if timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_NTP.value:
-        timestamp = get_timestamp_ntp()
         timestamp_format_flag = TimestampFormatFlag.NTP_v4.value
+        timestamp = get_timestamp_ntp()
     elif timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_PTPv2.value:
-        timestamp = get_timestamp_ptp()
         timestamp_format_flag = TimestampFormatFlag.PTP_V2.value
+        timestamp = get_timestamp_ptp()
 
     # Translate external source sync
     if ext_source_sync:
@@ -384,7 +384,7 @@ def generate_stamp_test_packet(
     # Build IPv6 header
     ipv6_header = IPv6()
     ipv6_header.src = src_ip
-    ipv6_header.dst = sidlist[0]  # dst_ip
+    ipv6_header.dst = sidlist[0]
 
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
@@ -409,7 +409,7 @@ def generate_stamp_test_packet(
     )
 
     # Assemble the whole packet
-    packet = (ipv6_header / srv6_header / udp_header / stamp_packet)
+    packet = ipv6_header / srv6_header / udp_header / stamp_packet
 
     # Return the packet
     return packet
