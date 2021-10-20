@@ -49,6 +49,8 @@ from scapy.sendrecv import AsyncSniffer
 
 from utils import (
     MAX_SEQUENCE_NUMBER,
+    MAX_SSID,
+    MIN_SSID,
     NEXT_HEADER_IPV6_FIELD,
     NEXT_HEADER_SRH_FIELD,
     ROUTING_HEADER_PROTOCOL_NUMBER,
@@ -550,6 +552,16 @@ class STAMPSessionSenderServicer(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_EXISTS,
                 description='A session with SSID {ssid} already exists'
                             .format(ssid=request.ssid))
+
+        # Check if SSID is in the valid range
+        if request.ssid < MIN_SSID or request.ssid > MAX_SSID:
+            logging.error('SSID is outside the valid range [{%d}, {%d}]',
+                          MIN_SSID, MAX_SSID)
+            return stamp_sender_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
+                description='SSID is outside the valid range '
+                            '[{min_ssid}, {max_ssid}]'
+                            .format(min_ssid=MIN_SSID, max_ssid=MAX_SSID))
 
         # Extract STAMP Source IPv6 address from the request message
         # This parameter is optional, therefore we set it to None if it is

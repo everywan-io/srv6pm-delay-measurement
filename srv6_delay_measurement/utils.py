@@ -41,6 +41,12 @@ from libs.libstamp import (
 # Maximum STAMP Sequence Number
 MAX_SEQUENCE_NUMBER = 2**32 - 1
 
+# Minimum STAMP Session Identifier (SSID)
+MIN_SSID = 0
+
+# Maximum STAMP Session Identifier (SSID)
+MAX_SSID = 2**16 - 1
+
 
 # Constants related to the STAMP packets
 
@@ -768,7 +774,3 @@ class STAMPReflectorSession(STAMPSession):
         self.session_reflector_mode = session_reflector_mode
         # Segment List for the return SRv6 path (Reflector -> Sender)
         self.return_sidlist = return_sidlist
-
-
-# TODO come configurare l3rawsocket?
-# TODO verificare scale e multiplier. sono corretti ?
