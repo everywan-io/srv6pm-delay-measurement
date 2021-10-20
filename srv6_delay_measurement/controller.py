@@ -640,9 +640,13 @@ class Controller:
 
     Methods
     -------
-    add_stamp_sender(node_id, udp_port=None)
+    add_stamp_sender(node_id, grpc_ip, grpc_port, ip, udp_port=None,
+                     interfaces=None, stamp_source_ipv6_address=None,
+                     initialize=True)
         Add a STAMP Sender to the Controller inventory.
-    add_stamp_reflector(node_id, ip, udp_port)
+    add_stamp_reflector(node_id, grpc_ip, grpc_port, ip, udp_port,
+                        interfaces=None, stamp_source_ipv6_address=None,
+                        initialize=True)
         Add a STAMP Reflector to the Controller inventory.
     init_sender(sender_udp_port=20000, interfaces=None)
         Establish a gRPC connection to a STAMP Session Sender and initialize
@@ -686,7 +690,7 @@ class Controller:
     destroy_stamp_session(ssid):
         Destroy an existing STAMP Session identified by the SSID.
     get_stamp_results(ssid):
-        Get the results collected by the STAMP Sender for the STAMP Session
+        Get the results fetched by the STAMP Sender for the STAMP Session
          identified by the SSID.
     """
 
@@ -718,7 +722,8 @@ class Controller:
             logger.setLevel(level=logging.INFO)
 
     def add_stamp_sender(self, node_id, grpc_ip, grpc_port, ip, udp_port=None,
-                         interfaces=None, stamp_source_ipv6_address=None):
+                         interfaces=None, stamp_source_ipv6_address=None,
+                         initialize=True):
         """
         Add a STAMP Sender to the Controller inventory.
 
@@ -739,6 +744,8 @@ class Controller:
              create_stamp_session method. If None, the Sender/Reflector will
              use the loopback IPv6 address as STAMP Source Address
              (default: None).
+        initialize : bool, optional
+            Whether to automatically initialize the STAMP Sender or not.
 
         Raises
         ------
@@ -756,6 +763,7 @@ class Controller:
         # Check if node_id is already taken
         if self.stamp_nodes.get(node_id, None) is not None:
             raise NodeIdAlreadyExistsError
+
         # Create a STAMP Sender object and store it
         node = STAMPSender(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
@@ -763,8 +771,13 @@ class Controller:
             stamp_source_ipv6_address=stamp_source_ipv6_address)
         self.stamp_nodes[node_id] = node
 
+        # Initialize the node, eventually
+        if initialize:
+            self.init_sender(node_id)
+
     def add_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip, udp_port,
-                            interfaces=None, stamp_source_ipv6_address=None):
+                            interfaces=None, stamp_source_ipv6_address=None,
+                            initialize=True):
         """
         Add a STAMP Reflector to the Controller inventory.
 
@@ -782,6 +795,8 @@ class Controller:
              create_stamp_session method. If None, the Sender/Reflector will
              use the loopback IPv6 address as STAMP Source Address
              (default: None).
+        initialize : bool, optional
+            Whether to automatically initialize the STAMP Sender or not.
 
         Raises
         ------
@@ -799,12 +814,17 @@ class Controller:
         # Check if node_id is already taken
         if self.stamp_nodes.get(node_id, None) is not None:
             raise NodeIdAlreadyExistsError
+        
         # Create a STAMP Sender object and store it
         node = STAMPReflector(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
             udp_port=udp_port, interfaces=interfaces,
             stamp_source_ipv6_address=stamp_source_ipv6_address)
         self.stamp_nodes[node_id] = node
+
+        # Initialize the node, eventually
+        if initialize:
+            self.init_reflector(node_id)
 
     def init_sender(self, node_id):
         """
@@ -1670,9 +1690,9 @@ class Controller:
 
         logger.debug('STAMP Session destroyed successfully')
 
-    def collect_stamp_results(self, ssid):
+    def fetch_stamp_results(self, ssid):
         """
-        Get the results collected by the STAMP Sender for the STAMP Session
+        Get the results fetched by the STAMP Sender for the STAMP Session
          identified by the SSID and store them internally to the controller.
 
         Parameters
@@ -1685,7 +1705,7 @@ class Controller:
         None
         """
 
-        logger.debug('Collecting results for STAMP Session, ssid: %d', ssid)
+        logger.debug('Fetching results for STAMP Session, ssid: %d', ssid)
 
         # Get STAMP Session; if it does not exist, return an error
         stamp_session = self.stamp_sessions.get(ssid, None)
@@ -1694,13 +1714,13 @@ class Controller:
             raise STAMPSessionNotFoundError(ssid)
 
         # Get results of the STAMP Session
-        logger.debug('Collecting results from STAMP Sender')
+        logger.debug('Fetching results from STAMP Sender')
         request = stamp_sender_pb2.GetStampSessionResultsRequest()
         request.ssid = ssid
         reply = stamp_session.sender.grpc_stub.GetStampSessionResults(request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error(
-                'Cannot collect STAMP Session results (SSID %d): %s',
+                'Cannot fetch STAMP Session results (SSID %d): %s',
                 request.ssid, reply.description)
             # Raise an exception
             raise GetSTAMPResultsError(reply.description)
@@ -1748,7 +1768,7 @@ class Controller:
                          .stamp_session_return_path_results.mean_delay)
             logger.debug('*********\n')
 
-    def get_stamp_results(self, ssid, collect_results_from_stamp=False):
+    def get_stamp_results(self, ssid, fetch_results_from_stamp=False):
         """
         Return the results stored in the controller.
 
@@ -1756,8 +1776,8 @@ class Controller:
         ----------
         ssid : int
             The 16-bit STAMP Session Identifier (SSID).
-        collect_results_from_stamp : bool, optional
-            Whether to collect the new results from the STAMP Sender. If
+        fetch_results_from_stamp : bool, optional
+            Whether to fetch the new results from the STAMP Sender. If
             False, only the results already stored in the controller inventory
             are returned (default: False).
 
@@ -1777,15 +1797,15 @@ class Controller:
             logger.error('Session %d does not exist', ssid)
             raise STAMPSessionNotFoundError(ssid)
 
-        # Eventually, collect new results from the STAMP Sender
-        if collect_results_from_stamp:
-            self.collect_stamp_results(ssid)
+        # Eventually, fetch new results from the STAMP Sender
+        if fetch_results_from_stamp:
+            self.fetch_stamp_results(ssid)
 
         # Return the mean delay
         return (stamp_session.stamp_session_direct_path_results.mean_delay,
                 stamp_session.stamp_session_return_path_results.mean_delay)
 
-    def print_stamp_results(self, ssid, collect_results_from_stamp=False):
+    def print_stamp_results(self, ssid, fetch_results_from_stamp=False):
         """
         Print the results stored in the controller.
 
@@ -1793,8 +1813,8 @@ class Controller:
         ----------
         ssid : int
             The 16-bit STAMP Session Identifier (SSID).
-        collect_results_from_stamp : bool, optional
-            Whether to collect the new results from the STAMP Sender. If
+        fetch_results_from_stamp : bool, optional
+            Whether to fetch the new results from the STAMP Sender. If
             False, only the results already stored in the controller inventory
             are returned (default: False).
 
@@ -1807,7 +1827,7 @@ class Controller:
 
         # Get results from the controller inventory
         mean_delay_direct_path, mean_delay_return_path = \
-            self.get_stamp_results(ssid, collect_results_from_stamp)
+            self.get_stamp_results(ssid, fetch_results_from_stamp)
 
         # Print results
         print()
