@@ -318,7 +318,8 @@ def ntp_to_unix_timestamp(timestamp_seconds, timestamp_fraction):
     """
 
     timestamp = timestamp_seconds + \
-        float('0.{fraction}'.format(fraction=timestamp_fraction))
+        float('0.{fraction}'.format(fraction=timestamp_fraction)) - \
+        UNIX_TO_NTP_TIMESTAMP_OFFSET
 
     logging.debug('Reassembling NTP Timestamp, seconds: {seconds}, '
                   'fraction: {fraction}, reassembled timestamp: {timestamp}'
@@ -433,7 +434,8 @@ def generate_stamp_test_packet(
         S=sync_flag,
         Z=timestamp_format_flag,
         scale=scale,
-        multiplier=multiplier
+        multiplier=multiplier,
+        ssid=ssid
     )
 
     # Assemble the whole packet
@@ -549,6 +551,7 @@ def generate_stamp_reply_packet(
         Z=timestamp_format_flag,
         scale=scale,
         multiplier=multiplier,
+        ssid=ssid,
         first_part_timestamp_receiver=timestamp.seconds,
         second_part_timestamp_receiver=timestamp.fraction,
         seq_num_sender=parsed_stamp_test_packet.sequence_number,
