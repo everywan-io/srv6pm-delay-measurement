@@ -325,3 +325,120 @@ class STAMPSessionNotFoundError(Exception):
         if ssid is not None:
             self.msg = 'STAMP Session {ssid} does not exist'.format(ssid=ssid)
         super().__init__(self.msg)
+
+
+class STAMPSessionExistsError(Exception):
+    """Raised when attempting to create a STAMP Session and the SSID is
+    already used.
+
+    Parameters
+    ----------
+    ssid : int
+        16-bit STAMP Session Identifier (SSID).
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, ssid=None):
+        self.msg = ''
+        if ssid is not None:
+            self.msg = 'STAMP Session {ssid} already exists'.format(ssid=ssid)
+        super().__init__(self.msg)
+
+
+class STAMPSessionNotRunningError(Exception):
+    """Raised when attempting to perform an operation on a non-running STAMP
+    Session and it is not allowed.
+
+    Parameters
+    ----------
+    ssid : int
+        16-bit STAMP Session Identifier (SSID).
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, ssid=None):
+        self.msg = ''
+        if ssid is not None:
+            self.msg = 'STAMP Session {ssid} is not running'.format(ssid=ssid)
+        super().__init__(self.msg)
+
+
+class STAMPSessionRunningError(Exception):
+    """Raised when attempting to perform an operation on a running STAMP
+    Session and it is not allowed.
+
+    Parameters
+    ----------
+    ssid : int
+        16-bit STAMP Session Identifier (SSID).
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, ssid=None):
+        self.msg = ''
+        if ssid is not None:
+            self.msg = 'STAMP Session {ssid} is running'.format(ssid=ssid)
+        super().__init__(self.msg)
+
+
+class InvalidArgumentError(Exception):
+    """Raised when an invalid argument is detected during the execution of an
+    operation.
+
+    Parameters
+    ----------
+    type : str, optional
+        The type of the argument that is not valid.
+    value : str, optional
+        The value of the argument that is not valid.
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, type=None, value=None):
+        self.msg = ''
+        if type is not None and value is not None:
+            self.msg = f'Invalid value {value} for the argument {type}'
+        super().__init__(self.msg)
+
+
+class InternalError(Exception):
+    """Raised when attempting to perform an operation on a running STAMP
+    Session and it is not allowed.
+
+    Parameters
+    ----------
+    ssid : int
+        16-bit STAMP Session Identifier (SSID).
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """
+
+    def __init__(self, msg=None):
+        self.msg = ''
+        if msg is not None:
+            self.msg = f'An internal error occurred: {msg}'
+        super().__init__(self.msg)
