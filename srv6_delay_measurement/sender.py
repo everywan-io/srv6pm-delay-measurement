@@ -1179,7 +1179,7 @@ class STAMPSessionSenderServicer(
         # Populate the gRPC reply with the test results
         for result in results:
             res = reply.results.add()
-            res.ssid = result.ssid
+            res.ssid = result['ssid']
             res.test_pkt_tx_timestamp = result['test_pkt_tx_timestamp']
             res.reply_pkt_tx_timestamp = result['reply_pkt_tx_timestamp']
             res.reply_pkt_rx_timestamp = result['reply_pkt_rx_timestamp']
