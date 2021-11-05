@@ -44,7 +44,7 @@ from srv6_delay_measurement.exceptions import InternalError, InvalidArgumentErro
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
 
-from scapy.arch.linux import L3PacketSocket
+from scapy.layers.inet6 import L3RawSocket6
 from scapy.sendrecv import AsyncSniffer
 
 from utils import (
@@ -396,10 +396,10 @@ class STAMPSessionSender:
         if stamp_source_ipv6_address:
             self.stamp_source_ipv6_address = stamp_source_ipv6_address
 
-        # Open a Scapy socket (L3PacketSocket) for sending and receiving STAMP
-        # packets; under the hood, L3PacketSocket uses a AF_PACKET socket
+        # Open a Scapy socket (L3RawSocket6) for sending and receiving STAMP
+        # packets; under the hood, L3RawSocket6 uses a AF_INET6 socket
         logger.debug('Creating a new sender socket')
-        self.sender_socket = L3PacketSocket()
+        self.sender_socket = L3RawSocket6()
 
         # Open a UDP socket
         # UDP socket will not be used at all, but we need for two reasons:
