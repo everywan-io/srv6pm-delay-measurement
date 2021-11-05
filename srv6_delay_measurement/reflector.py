@@ -131,7 +131,7 @@ class STAMPSessionReflector:
             The list of interfaces on which the Reflector will listen for
             STAMP packets. If the parameter is None, STAMP will listen on all
             the interfaces except the loopback interface (default: None).
-        stamp_source_ipv6_address : str
+        stamp_source_ipv6_address : str, optional
             The IPv6 address to be used as source address of the STAMP
             packets. If the parameter is None, STAMP will use the session
             specific IP, if provided, otherwise the loopback IP address will
@@ -348,7 +348,7 @@ class STAMPSessionReflector:
         ------
         NodeNotInitializedError
             If the STAMP Reflector has not been initialized.
-        STAMPSessionRunningError
+        STAMPSessionExistsError
             If the SSID is already used.
         NotImplementedError
             If the requested feature has not been implemented.
@@ -732,12 +732,19 @@ class STAMPSessionReflectorServicer(
         logger.debug('Init RPC invoked. Request: %s', request)
         logger.info('Initializing STAMP Session-Reflector')
 
+        # Extract STAMP Source IPv6 address from the request message
+        # This parameter is optional, therefore we set it to None if it is
+        # not provided
+        stamp_source_ipv6_address = None
+        if request.stamp_source_ipv6_address:
+            stamp_source_ipv6_address = request.stamp_source_ipv6_address
+
         # Try to initialize the Reflector node
         try:
             self.stamp_session_reflector.init(
                 reflector_udp_port=request.reflector_udp_port,
-                interfaces=request.interfaces,
-                stamp_source_ipv6_address=request.stamp_source_ipv6_address
+                interfaces=list(request.interfaces),
+                stamp_source_ipv6_address=stamp_source_ipv6_address
             )
         except NodeInitializedError:
             # The Reflector has been already initialized, return an error
@@ -761,7 +768,7 @@ class STAMPSessionReflectorServicer(
         except InternalError as err:
             # Failed to create a UDP socket, return an error
             logger.error('Cannot complete the request operation: Cannot '
-                         'create UDP socket: %s', err)
+                         'create UDP socket: %s', err.msg)
             return stamp_reflector_pb2.InitStampReflectorReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
                 description='Cannot create UDP socket: {err}'
@@ -931,7 +938,7 @@ class STAMPSessionReflectorServicer(
             return stamp_reflector_pb2.StopStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
                 description='SSID {ssid} not found'.format(ssid=request.ssid))
-        except STAMPSessionRunningError:
+        except STAMPSessionNotRunningError:
             # The STAMP Session is currently running; we cannot stop a
             # non-running session
             logger.error('Cannot complete the requested operation: Cannot '
