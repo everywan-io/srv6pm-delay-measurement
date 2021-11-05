@@ -40,9 +40,20 @@ import time
 import grpc
 
 import common_pb2
-from srv6_delay_measurement.exceptions import InternalError, InvalidArgumentError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, ResetSTAMPNodeError, STAMPSessionExistsError, STAMPSessionNotFoundError, STAMPSessionNotRunningError, STAMPSessionRunningError
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
+
+from srv6_delay_measurement.exceptions import (
+    InternalError,
+    InvalidArgumentError,
+    NodeInitializedError,
+    NodeNotInitializedError,
+    ResetSTAMPNodeError,
+    STAMPSessionExistsError,
+    STAMPSessionNotFoundError,
+    STAMPSessionNotRunningError,
+    STAMPSessionRunningError
+)
 
 from scapy.layers.inet6 import L3RawSocket6
 from scapy.sendrecv import AsyncSniffer
@@ -986,17 +997,18 @@ class STAMPSessionSenderServicer(
         # Try to create a STAMP Session
         try:
             _, _, auth_mode, key_chain, \
-            timestamp_format, packet_loss_type, delay_measurement_mode = \
-            self.stamp_session_sender.create_stamp_session(
-                ssid=request.ssid, reflector_ip=request.stamp_params.reflector_ip,
-                stamp_source_ipv6_address=stamp_source_ipv6_address,
-                interval=request.interval, auth_mode=auth_mode,
-                key_chain=key_chain, timestamp_format=timestamp_format,
-                packet_loss_type=packet_loss_type,
-                delay_measurement_mode=delay_measurement_mode,
-                reflector_udp_port=request.stamp_params.reflector_udp_port,
-                segments=list(request.sidlist.segments)
-            )
+                timestamp_format, packet_loss_type, delay_measurement_mode = \
+                self.stamp_session_sender.create_stamp_session(
+                    ssid=request.ssid,
+                    reflector_ip=request.stamp_params.reflector_ip,
+                    stamp_source_ipv6_address=stamp_source_ipv6_address,
+                    interval=request.interval, auth_mode=auth_mode,
+                    key_chain=key_chain, timestamp_format=timestamp_format,
+                    packet_loss_type=packet_loss_type,
+                    delay_measurement_mode=delay_measurement_mode,
+                    reflector_udp_port=request.stamp_params.reflector_udp_port,
+                    segments=list(request.sidlist.segments)
+                )
         except NodeNotInitializedError:
             # The Reflector is not initialized
             # To create the STAMP Session, the Reflector node needs to be
