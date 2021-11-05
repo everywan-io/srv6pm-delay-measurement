@@ -40,7 +40,7 @@ import time
 import grpc
 
 import common_pb2
-from srv6_delay_measurement.exceptions import ResetSTAMPNodeError
+from srv6_delay_measurement.exceptions import InternalError, InvalidArgumentError, NodeIdNotFoundError, NodeInitializedError, NodeNotInitializedError, ResetSTAMPNodeError, STAMPSessionExistsError, STAMPSessionNotFoundError, STAMPSessionNotRunningError, STAMPSessionRunningError
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
 
@@ -82,8 +82,7 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 
-class STAMPSessionSenderServicer(
-        stamp_sender_pb2_grpc.STAMPSessionSenderService):
+class STAMPSessionSender:
     """
     Provides methods that implement the functionalities of a STAMP Session
     Sender.
@@ -323,7 +322,140 @@ class STAMPSessionSenderServicer(
             # Wait before sending the next packet
             time.sleep(interval)
 
-    def _reset(self):
+    def init(self, sender_udp_port, interfaces=None,
+             stamp_source_ipv6_address=None):
+        """
+        Initialize the STAMP Session Sender and prepare it to run STAMP
+        Sessions.
+
+        Parameters
+        ----------
+        sender_udp_port : int
+            The UDP port to use for sending and receiving STAMP packets.
+        interfaces : list, optional
+            The list of interfaces on which the Sender will listen for
+            STAMP packets. If the parameter is None, STAMP will listen on all
+            the interfaces except the loopback interface (default: None).
+        stamp_source_ipv6_address : str, optional
+            The IPv6 address to be used as source address of the STAMP
+            packets. If the parameter is None, STAMP will use the session
+            specific IP, if provided, otherwise the loopback IP address will
+            be used (default: None).
+
+        Returns
+        -------
+        None.
+
+        Raises
+        ------
+        NodeInitializedError
+            If the STAMP Reflector is already initialized.
+        InvalidArgumentError
+            If an invalid UDP port number has been provided.
+        InternalError
+            If the Reflector failed to create a UDP socket.
+        """
+
+        logger.info('Initializing STAMP Session-Sender')
+
+        # If already initialized, return an error
+        if self.is_initialized:
+            logging.error('Sender node has been already initialized')
+            raise NodeInitializedError
+
+        # Validate the UDP port provided
+        # We also accept 0 as UDP port (port 0 means random port)
+        logger.debug('Validating the provided UDP port: %d',
+                     sender_udp_port)
+        if sender_udp_port not in range(0, 65536):
+            logging.error('Invalid UDP port %d', sender_udp_port)
+            raise InvalidArgumentError(type='udp_port',
+                                       value=str(sender_udp_port))
+        logger.info('UDP port %d is valid', sender_udp_port)
+
+        # Extract the interface from the gRPC message
+        # Interface is an optional argument; when omitted, we listen on all the
+        # interfaces except loopback interface
+        if interfaces is None or len(interfaces) == 0:
+            # Get all the interfaces
+            self.stamp_interfaces = netifaces.interfaces()
+            # We exclude the loopback interface to avoid problems
+            # From the scapy documentation...
+            #    The loopback interface is a very special interface. Packets
+            #    going through it are not really assembled and disassembled.
+            #    The kernel routes the packet to its destination while it is
+            #    still stored an internal structure
+            self.stamp_interfaces.remove('lo')
+        else:
+            # One or more interfaces provided in the gRPC message
+            self.stamp_interfaces = list(interfaces)
+
+        # Extract STAMP Source IPv6 address from the request message
+        # This parameter is optional, therefore we leave it to None if it is
+        # not provided
+        if stamp_source_ipv6_address:
+            self.stamp_source_ipv6_address = stamp_source_ipv6_address
+
+        # Open a Scapy socket (L3PacketSocket) for sending and receiving STAMP
+        # packets; under the hood, L3PacketSocket uses a AF_PACKET socket
+        logger.debug('Creating a new sender socket')
+        self.sender_socket = L3PacketSocket()
+
+        # Open a UDP socket
+        # UDP socket will not be used at all, but we need for two reasons:
+        # - to reserve STAMP UDP port and prevent other applications from
+        #   using it
+        # - to implement a mechanism of randomly chosen UDP port; indeed, to
+        #   get a random free UDP port we can bind a UDP socket to port 0
+        #   (only on the STAMP Sender)
+        logger.debug('Creating an auxiliary UDP socket')
+        self.auxiliary_socket = socket.socket(
+            socket.AF_INET6, socket.SOCK_DGRAM, 0)
+        try:
+            self.auxiliary_socket.bind(('::', sender_udp_port))
+        except OSError as err:
+            logging.error('Cannot create UDP socket: %s', err)
+            # Reset the node
+            self.reset()
+            # Return an error to the Controller
+            raise InternalError(msg=err)
+        logger.info('Socket configured')
+
+        # Extract the UDP port (this also works if we are chosing the port
+        # randomly)
+        logger.debug('Configuring UDP port %d',
+                     self.auxiliary_socket.getsockname()[1])
+        self.sender_udp_port = self.auxiliary_socket.getsockname()[1]
+        logger.info('Using UDP port %d', self.sender_udp_port)
+
+        # Set an iptables rule to drop STAMP packets after delivering them
+        # to Scapy; this is required to avoid ICMP error messages when the
+        # STAMP packets are delivered to a non-existing UDP port
+        rule_exists = os.system('ip6tables -C INPUT -p udp --dport {port} '
+                                '-j DROP'
+                                .format(port=self.sender_udp_port)) == 0
+        if not rule_exists:
+            logger.info('Setting ip6tables rule for STAMP packets')
+            os.system('ip6tables -I INPUT -p udp --dport {port} -j DROP'
+                      .format(port=self.sender_udp_port))
+        else:
+            logger.info('ip6tables rule for STAMP packets already exist. '
+                        'Skipping')
+
+        # Create and start a new thread to listen for incoming STAMP Test
+        # Reply packets
+        logger.info('Starting receive thread')
+        logger.info('Start sniffing...')
+        self.stamp_packet_receiver = self.build_stamp_reply_packets_sniffer()
+        self.stamp_packet_receiver.start()
+
+        # Set "is_initialized" flag
+        self.is_initialized = True
+
+        # Success
+        logger.info('Initialization completed')
+
+    def reset(self):
         """
         Helper function used to reset and stop the Sender. In order to reset a
         STAMP Sender there must be no STAMP sessions.
@@ -369,7 +501,7 @@ class STAMPSessionSenderServicer(
         self.sender_udp_port = None
 
         # Close the auxiliary UDP socket
-        if is not None:
+        if self.auxiliary_socket is not None:
             logger.info('Closing the auxiliary UDP socket')
             self.auxiliary_socket.close()
             self.auxiliary_socket = None
@@ -390,114 +522,415 @@ class STAMPSessionSenderServicer(
         # Success
         logger.info('Reset completed')
 
+    def create_stamp_session(self, ssid, reflector_ip,
+                             stamp_source_ipv6_address, interval, auth_mode,
+                             key_chain, timestamp_format, packet_loss_type,
+                             delay_measurement_mode,
+                             reflector_udp_port, segments):
+        """
+        Create a new STAMP Session. Newly created sessions are in non-running
+        state. To start a session, you need to use the start_stamp_session
+        method.
+
+        Parameters
+        ----------
+        ssid : int
+            16-bit Session Segment Identifier (SSID).
+        reflector_ip : str
+            IP address of the STAMP Session Reflector.
+        stamp_source_ipv6_address : str
+            IP address to be used as source IPv6 address of the STAMP packets.
+            If it is None, the global IPv6 address will be used as source
+            IPv6 address.
+        interval : int
+            Time (in seconds) between two STAMP Test packets.
+        auth_mode : utils.AuthenticationMode
+            Authentication Mode (i.e. Authenticated or Unauthenticated).
+        key_chain : str
+            Key chain used for the Authenticated Mode.
+        timestamp_format : utils.TimestampFormat
+            Format of the timestamp (i.e. NTP or PTPv2).
+        packet_loss_type : utils.PacketLossType
+            Packet Loss Type (i.e. Round Trip, Near End, Far End).
+        delay_measurement_mode : utils.DelayMeasurementMode
+            Delay Measurement Mode (i.e. One-Way, Two-Way or Loopback).
+        reflector_udp_port : int
+            The UDP port to use for sending and receiving STAMP packets.
+        segments : list
+            The Segment List of the Direct Path.
+
+        Returns
+        -------
+        None.
+
+        Raises
+        ------
+        NodeNotInitializedError
+            If the STAMP Reflector has not been initialized.
+        STAMPSessionExistsError
+            If the SSID is already used.
+        NotImplementedError
+            If the requested feature has not been implemented.
+        """
+
+        logger.info('Creating new STAMP Session, SSID %d', ssid)
+
+        # If Sender is not initialized, return an error
+        if not self.is_initialized:
+            logging.error('Sender node is not initialized')
+            raise NodeNotInitializedError
+
+        # Retrieve the STAMP Session from the sessions dict
+        logger.debug('Get Session, SSID %d', ssid)
+        session = self.stamp_sessions.get(ssid, None)
+
+        # If the session already exists, return an error
+        logger.debug('Validate SSID %d', ssid)
+        if session is not None:
+            logging.error('A session with SSID %d already exists', ssid)
+            raise STAMPSessionExistsError(ssid=ssid)
+
+        # Check Authentication Mode
+        if auth_mode == AuthenticationMode.AUTHENTICATION_MODE_HMAC_SHA_256:
+            logger.fatal('Authenticated Mode is not implemented')
+            raise NotImplementedError
+
+        # Check Delay Measurement Mode
+        if delay_measurement_mode == \
+                DelayMeasurementMode.DELAY_MEASUREMENT_MODE_ONE_WAY:
+            logger.fatal('One-Way Measurement Mode is not implemented')
+            raise NotImplementedError  # TODO we need to support this!!!
+        elif delay_measurement_mode == \
+                DelayMeasurementMode.DELAY_MEASUREMENT_MODE_LOOPBACK:
+            logger.fatal('Loopback Measurement Mode is not implemented')
+            raise NotImplementedError
+
+        # Initialize a new STAMP Session
+        logger.debug('Initializing a new STAMP Session')
+        stamp_session = STAMPSenderSession(
+            ssid=ssid,
+            reflector_ip=reflector_ip,
+            reflector_udp_port=reflector_udp_port,
+            sidlist=segments,
+            auth_mode=auth_mode, key_chain=key_chain,
+            timestamp_format=timestamp_format,
+            packet_loss_type=packet_loss_type,
+            delay_measurement_mode=delay_measurement_mode,
+            stop_flag=Event(),  # To support stopping the sending thread
+            stamp_source_ipv6_address=stamp_source_ipv6_address
+        )
+        logger.info('STAMP Session initialized: SSID %d', ssid)
+
+        # Create a new thread to handle the asynchronous periodic sending of
+        # STAMP Test packets; the new thread is not started here, it is
+        # started by the StartStampSession RPC
+        logger.info('Creating sending thread')
+        stamp_session.sending_thread = Thread(
+            target=self.send_stamp_packet_periodic,
+            kwargs={
+                'ssid': ssid,
+                'interval': interval
+            }
+        )
+
+        # Add the STAMP session to the STAMP sessions dict
+        self.stamp_sessions[ssid] = stamp_session
+
+        # We return the STAMP parameters to inform the caller about
+        # the values chosen by the Sender for the optional parameters
+        logger.info('STAMP Session (SSID %d) created', ssid)
+        return reflector_ip, reflector_udp_port, auth_mode, key_chain, \
+            timestamp_format, packet_loss_type, delay_measurement_mode
+
+    def start_stamp_session(self, ssid):
+        """
+        Start an existing STAMP Session.
+
+        Parameters
+        ----------
+        ssid : int
+            16-bit Session Segment Identifier (SSID).
+
+        Returns
+        -------
+        None.
+
+        Raises
+        ------
+        NodeNotInitializedError
+            If the STAMP Reflector has not been initialized.
+        STAMPSessionNotFoundError
+            If the STAMP Session does not exist.
+        STAMPSessionRunningError
+            If the STAMP Session is already running.
+        """
+
+        logger.info('Starting STAMP Session, SSID %d', ssid)
+
+        # If Sender is not initialized, return an error
+        if not self.is_initialized:
+            logging.error('Sender node is not initialized')
+            raise NodeNotInitializedError
+
+        # Retrieve the STAMP Session from the sessions dict
+        logger.debug('Get Session, SSID %d', ssid)
+        session = self.stamp_sessions[ssid]
+
+        # If the session does not exist, return an error
+        logger.debug('Validate SSID %d', ssid)
+        if session is None:
+            logging.error('SSID %d not found', ssid)
+            raise STAMPSessionNotFoundError(ssid=ssid)
+
+        # If the session is already running, return an error
+        logger.debug('Checking if session is running, SSID %d', ssid)
+        if session.is_running:
+            logging.error('Cannot start STAMP Session (SSID %d): Session '
+                          'already running', ssid)
+            raise STAMPSessionNotRunningError(ssid=ssid)
+
+        # Start the sending thread
+        logger.info('Starting sending thread')
+        session.sending_thread.start()
+
+        # Set the flag "started"
+        session.set_started()
+
+        # Success
+        logger.info('STAMP Session (SSID %d) started', ssid)
+
+    def stop_stamp_session(self, ssid):
+        """
+        Stop a running STAMP Session.
+
+        Parameters
+        ----------
+        ssid : int
+            16-bit Session Segment Identifier (SSID).
+
+        Returns
+        -------
+        None.
+
+        Raises
+        ------
+        STAMPSessionNotFoundError
+            If the STAMP Session does not exist.
+        STAMPSessionNotRunningError
+            If the STAMP Session is not running.
+        """
+
+        logger.info('Stopping STAMP Session, SSID %d', ssid)
+
+        # Retrieve the STAMP Session from the sessions dict
+        logger.debug('Get Session, SSID %d', ssid)
+        session = self.stamp_sessions.get(ssid, None)
+
+        # If the session does not exist, return an error
+        logger.debug('Validate SSID %d', ssid)
+        if session is None:
+            logging.error('SSID %d not found', ssid)
+            raise STAMPSessionNotFoundError(ssid=ssid)
+
+        # If the session is not running, return an error
+        logger.debug('Checking if session is running, SSID %d', ssid)
+        if not session.is_running:
+            logging.error('Cannot stop STAMP Session (SSID %d): Session '
+                          'not running', ssid)
+            raise STAMPSessionNotRunningError(ssid=ssid)
+
+        # Stop the sending thread
+        logger.info('Stopping sending thread')
+        session.stop_flag.set()
+
+        # Clear the flag "started"
+        session.clear_started()
+
+        # Success
+        logger.info('STAMP Session (SSID %d) stopped', ssid)
+
+    def destroy_stamp_session(self, ssid):
+        """
+        Remove an existing STAMP Session. The session must not be running.
+
+        Parameters
+        ----------
+        ssid : int
+            16-bit Session Segment Identifier (SSID).
+
+        Returns
+        -------
+        None.
+
+        Raises
+        ------
+        NodeNotInitializedError
+            If the STAMP Reflector has not been initialized.
+        STAMPSessionNotFoundError
+            If the STAMP Session does not exist.
+        STAMPSessionRunningError
+            If the STAMP Session is running.
+        """
+
+        logger.info('Destroying STAMP Session, SSID %d', ssid)
+
+        # If Sender is not initialized, return an error
+        if not self.is_initialized:
+            logging.error('Sender node is not initialized')
+            raise NodeNotInitializedError
+
+        # Retrieve the STAMP Session from the sessions dict
+        logger.debug('Get Session, SSID %d', ssid)
+        session = self.stamp_sessions.get(ssid, None)
+
+        # If the session does not exist, return an error
+        logger.debug('Validate SSID %d', ssid)
+        if session is None:
+            logging.error('SSID %d not found', ssid)
+            raise STAMPSessionNotFoundError(ssid=ssid)
+
+        # If the session is running, we cannot destory it and we need to
+        # return an error
+        logger.debug('Checking if session is running, SSID %d', ssid)
+        if session.is_running:
+            logging.error('Cannot destroy STAMP Session (SSID %d): Session '
+                          'is currently running', ssid)
+            raise STAMPSessionRunningError(ssid=ssid)
+
+        logger.info('Removing Session with SSID %d', ssid)
+
+        # Remove the STAMP session from the list of existing sessions
+        del self.stamp_sessions[ssid]
+
+        # Success
+        logger.info('STAMP Session (SSID %d) destroyed', ssid)
+
+    def get_stamp_session_results(self, ssid):
+        """
+        Collect the results of a STAMP Session.
+
+        Parameters
+        ----------
+        ssid : int
+            16-bit Session Segment Identifier (SSID).
+
+        Returns
+        -------
+        results : list
+            The list of results. Each result is represented as a dict.
+            Example: {
+                'ssid': 101,
+                'test_pkt_tx_timestamp': 1635958467.2059603,
+                'reply_pkt_tx_timestamp': 1635958467.213707,
+                'reply_pkt_rx_timestamp': 1635958467.523983,
+                'test_pkt_rx_timestamp': 1635958467.213707
+            }
+
+        Raises
+        ------
+        NodeNotInitializedError
+            If the STAMP Reflector has not been initialized.
+        STAMPSessionNotFoundError
+            If the STAMP Session does not exist.
+        """
+
+        logger.info('Getting STAMP Session Results, SSID %d', ssid)
+
+        # If Sender is not initialized, return an error
+        if not self.is_initialized:
+            logging.error('Sender node is not initialized')
+            raise NodeNotInitializedError
+
+        # Retrieve the STAMP Session from the sessions dict
+        logger.debug('Get STAMP Session, SSID %d', ssid)
+        session = self.stamp_sessions.get(ssid, None)
+
+        # If the session does not exist, return an error
+        logger.debug('Validate SSID %d', ssid)
+        if session is None:
+            logging.error('SSID %d not found', ssid)
+            raise STAMPSessionNotFoundError(ssid=ssid)
+
+        logger.info('Collecting results for SSID %d', ssid)
+
+        # Prepare the results list
+        results = list()
+
+        # Populate the results list with the test results
+        for result in session.get_test_results():
+            results.append({
+                'ssid': result.ssid,
+                'test_pkt_tx_timestamp': result.test_pkt_tx_timestamp,
+                'reply_pkt_tx_timestamp': result.reply_pkt_tx_timestamp,
+                'reply_pkt_rx_timestamp': result.reply_pkt_rx_timestamp,
+                'test_pkt_rx_timestamp': result.test_pkt_rx_timestamp
+            })
+
+        # Set status code and return
+        logger.info('Returning %d results for STAMP Session (SSID %d)',
+                    len(results), ssid)
+        return results
+
+
+class STAMPSessionSenderServicer(
+        stamp_sender_pb2_grpc.STAMPSessionSenderService):
+    """
+    Provides methods that allow a controller to control the STAMP Session
+    Sender through the gRPC protocol.
+    """
+
+    def __init__(self, stamp_session_sender):
+        # Initialize super class STAMPSessionSenderService
+        super().__init__()
+        # Reference to the STAMPSessionSender to be controlled through the
+        # gRPC interface
+        self.stamp_session_sender = stamp_session_sender
+
     def Init(self, request, context):
         """RPC used to configure the Session Sender."""
 
         logger.debug('Init RPC invoked. Request: %s', request)
-        logger.info('Initializing STAMP Session-Sender')
 
-        # If already initialized, return an error
-        if self.is_initialized:
-            logging.error('Sender node has been already initialized')
+        # Extract STAMP Source IPv6 address from the request message
+        # This parameter is optional, therefore we set it to None if it is
+        # not provided
+        stamp_source_ipv6_address = None
+        if request.stamp_source_ipv6_address:
+            stamp_source_ipv6_address = request.stamp_source_ipv6_address
+
+        # Try to initialize the Session Sender
+        try:
+            self.stamp_session_sender.init(
+                sender_udp_port=request.sender_udp_port,
+                interfaces=list(request.interfaces),
+                stamp_source_ipv6_address=stamp_source_ipv6_address
+            )
+        except NodeInitializedError:
+            # The node has already been initialized, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Sender node has been already initialized')
             return stamp_sender_pb2.InitStampSenderReply(
                 status=common_pb2.StatusCode.STATUS_CODE_ALREADY_INITIALIZED,
                 description='Sender node has been already initialized')
-
-        # Validate the UDP port provided
-        # We also accept 0 as UDP port (port 0 means random port)
-        logger.debug('Validating the provided UDP port: %d',
-                     request.sender_udp_port)
-        if request.sender_udp_port not in range(0, 65536):
-            logging.error('Invalid UDP port %d', request.sender_udp_port)
+        except InvalidArgumentError:
+            # The provided UDP port is not valid, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Invalid UDP port %d', request.sender_udp_port)
             return stamp_sender_pb2.InitStampSenderReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
                 description='Invalid UDP port {port}'
                             .format(port=request.sender_udp_port))
-        logger.info('UDP port %d is valid', request.sender_udp_port)
-
-        # Extract the interface from the gRPC message
-        # Interface is an optional argument; when omitted, we listen on all the
-        # interfaces except loopback interface
-        if len(request.interfaces) == 0:
-            # Get all the interfaces
-            self.stamp_interfaces = netifaces.interfaces()
-            # We exclude the loopback interface to avoid problems
-            # From the scapy documentation...
-            #    The loopback interface is a very special interface. Packets
-            #    going through it are not really assembled and disassembled.
-            #    The kernel routes the packet to its destination while it is
-            #    still stored an internal structure
-            self.stamp_interfaces.remove('lo')
-        else:
-            # One or more interfaces provided in the gRPC message
-            self.stamp_interfaces = list(request.interfaces)
-
-        # Extract STAMP Source IPv6 address from the request message
-        # This parameter is optional, therefore we leave it to None if it is
-        # not provided
-        if request.stamp_source_ipv6_address:
-            self.stamp_source_ipv6_address = request.stamp_source_ipv6_address
-
-        # Open a Scapy socket (L3PacketSocket) for sending and receiving STAMP
-        # packets; under the hood, L3PacketSocket uses a AF_PACKET socket
-        logger.debug('Creating a new sender socket')
-        self.sender_socket = L3PacketSocket()
-
-        # Open a UDP socket
-        # UDP socket will not be used at all, but we need for two reasons:
-        # - to reserve STAMP UDP port and prevent other applications from
-        #   using it
-        # - to implement a mechanism of randomly chosen UDP port; indeed, to
-        #   get a random free UDP port we can bind a UDP socket to port 0
-        #   (only on the STAMP Sender)
-        logger.debug('Creating an auxiliary UDP socket')
-        self.auxiliary_socket = socket.socket(
-            socket.AF_INET6, socket.SOCK_DGRAM, 0)
-        try:
-            self.auxiliary_socket.bind(('::', request.sender_udp_port))
-        except OSError as err:
-            logging.error('Cannot create UDP socket: %s', err)
-            # Reset the node
-            self._reset()
+        except InternalError as err:
+            # Failed to create a UDP socket, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Cannot create UDP socket: %s', err.msg)
             # Return an error to the Controller
             return stamp_sender_pb2.InitStampSenderReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
-                description='Cannot create UDP socket: {err}'.format(err=err))
-        logger.info('Socket configured')
-
-        # Extract the UDP port (this also works if we are chosing the port
-        # randomly)
-        logger.debug('Configuring UDP port %d',
-                     self.auxiliary_socket.getsockname()[1])
-        self.sender_udp_port = self.auxiliary_socket.getsockname()[1]
-        logger.info('Using UDP port %d', self.sender_udp_port)
-
-        # Set an iptables rule to drop STAMP packets after delivering them
-        # to Scapy; this is required to avoid ICMP error messages when the
-        # STAMP packets are delivered to a non-existing UDP port
-        rule_exists = os.system('ip6tables -C INPUT -p udp --dport {port} '
-                                '-j DROP'
-                                .format(port=self.sender_udp_port)) == 0
-        if not rule_exists:
-            logger.info('Setting ip6tables rule for STAMP packets')
-            os.system('ip6tables -I INPUT -p udp --dport {port} -j DROP'
-                      .format(port=self.sender_udp_port))
-        else:
-            logger.info('ip6tables rule for STAMP packets already exist. '
-                        'Skipping')
-
-        # Create and start a new thread to listen for incoming STAMP Test
-        # Reply packets
-        logger.info('Starting receive thread')
-        logger.info('Start sniffing...')
-        self.stamp_packet_receiver = self.build_stamp_reply_packets_sniffer()
-        self.stamp_packet_receiver.start()
-
-        # Set "is_initialized" flag
-        self.is_initialized = True
+                description='Cannot create UDP socket: {err}'
+                            .format(err=err.msg))
 
         # Return with success status code
-        logger.info('Initialization completed')
         logger.debug('Init RPC completed')
         return stamp_sender_pb2.InitStampSenderReply(
             status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
@@ -511,7 +944,7 @@ class STAMPSessionSenderServicer(
         # Reset the Session Sender. If there are sessions, the reset operation
         # cannot be performed and we return an error to the controller
         try:
-            self._reset()
+            self.stamp_session_sender.reset()
         except ResetSTAMPNodeError:
             logging.error('Reset RPC failed')
             return stamp_sender_pb2.ResetStampSenderReply(
@@ -530,28 +963,6 @@ class STAMPSessionSenderServicer(
         """RPC used to create a new STAMP Session."""
 
         logger.debug('CreateStampSession RPC invoked. Request: %s', request)
-        logger.info('Creating new STAMP Session, SSID %d', request.ssid)
-
-        # If Sender is not initialized, return an error
-        if not self.is_initialized:
-            logging.error('Sender node is not initialized')
-            return stamp_sender_pb2.CreateStampSessionReply(
-                status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
-                description='Sender node is not initialized')
-
-        # Retrieve the STAMP Session from the sessions dict
-        logger.debug('Get Session, SSID %d', request.ssid)
-        session = self.stamp_sessions.get(request.ssid, None)
-
-        # If the session already exists, return an error
-        logger.debug('Validate SSID %d', request.ssid)
-        if session is not None:
-            logging.error('A session with SSID %d already exists',
-                          request.ssid)
-            return stamp_sender_pb2.CreateStampSessionReply(
-                status=common_pb2.StatusCode.STATUS_CODE_SESSION_EXISTS,
-                description='A session with SSID {ssid} already exists'
-                            .format(ssid=request.ssid))
 
         # Extract STAMP Source IPv6 address from the request message
         # This parameter is optional, therefore we set it to None if it is
@@ -572,51 +983,36 @@ class STAMPSessionSenderServicer(
         delay_measurement_mode = grpc_to_py_resolve_defaults(
             DelayMeasurementMode, request.stamp_params.delay_measurement_mode)
 
-        # Check Authentication Mode
-        if auth_mode == AuthenticationMode.AUTHENTICATION_MODE_HMAC_SHA_256:
-            logger.fatal('Authenticated Mode is not implemented')
-            raise NotImplementedError
-
-        # Check Delay Measurement Mode
-        if delay_measurement_mode == \
-                DelayMeasurementMode.DELAY_MEASUREMENT_MODE_ONE_WAY:
-            logger.fatal('One-Way Measurement Mode is not implemented')
-            raise NotImplementedError  # TODO we need to support this!!!
-        elif delay_measurement_mode == \
-                DelayMeasurementMode.DELAY_MEASUREMENT_MODE_LOOPBACK:
-            logger.fatal('Loopback Measurement Mode is not implemented')
-            raise NotImplementedError
-
-        # Initialize a new STAMP Session
-        logger.debug('Initializing a new STAMP Session')
-        stamp_session = STAMPSenderSession(
-            ssid=request.ssid,
-            reflector_ip=request.stamp_params.reflector_ip,
-            reflector_udp_port=request.stamp_params.reflector_udp_port,
-            sidlist=list(request.sidlist.segments),
-            auth_mode=auth_mode, key_chain=key_chain,
-            timestamp_format=timestamp_format,
-            packet_loss_type=packet_loss_type,
-            delay_measurement_mode=delay_measurement_mode,
-            stop_flag=Event(),  # To support stopping the sending thread
-            stamp_source_ipv6_address=stamp_source_ipv6_address
-        )
-        logger.info('STAMP Session initialized: SSID %d', request.ssid)
-
-        # Create a new thread to handle the asynchronous periodic sending of
-        # STAMP Test packets; the new thread is not started here, it is
-        # started by the StartStampSession RPC
-        logger.info('Creating sending thread')
-        stamp_session.sending_thread = Thread(
-            target=self.send_stamp_packet_periodic,
-            kwargs={
-                'ssid': request.ssid,
-                'interval': request.interval
-            }
-        )
-
-        # Add the STAMP session to the STAMP sessions dict
-        self.stamp_sessions[request.ssid] = stamp_session
+        # Try to create a STAMP Session
+        try:
+            _, _, auth_mode, key_chain, \
+            timestamp_format, packet_loss_type, delay_measurement_mode = \
+            self.stamp_session_sender.create_stamp_session(
+                ssid=request.ssid, reflector_ip=request.stamp_params.reflector_ip,
+                stamp_source_ipv6_address=stamp_source_ipv6_address,
+                interval=request.interval, auth_mode=auth_mode,
+                key_chain=key_chain, timestamp_format=timestamp_format,
+                packet_loss_type=packet_loss_type,
+                delay_measurement_mode=delay_measurement_mode,
+                reflector_udp_port=request.stamp_params.reflector_udp_port,
+                segments=list(request.sidlist.segments)
+            )
+        except NodeNotInitializedError:
+            # The Reflector is not initialized
+            # To create the STAMP Session, the Reflector node needs to be
+            # initialized
+            logging.error('Sender node is not initialized')
+            return stamp_sender_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
+                description='Sender node is not initialized')
+        except STAMPSessionExistsError:
+            # SSID is already used, return an error
+            logging.error('A session with SSID %d already exists',
+                          request.ssid)
+            return stamp_sender_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_SESSION_EXISTS,
+                description='A session with SSID {ssid} already exists'
+                            .format(ssid=request.ssid))
 
         # Create the reply message
         reply = stamp_sender_pb2.CreateStampSenderSessionReply()
@@ -641,7 +1037,6 @@ class STAMPSessionSenderServicer(
         reply.status = common_pb2.StatusCode.STATUS_CODE_SUCCESS
 
         # Return with success status code
-        logger.info('STAMP Session (SSID %d) created', request.ssid)
         logger.debug('CreateStampSession RPC completed')
         return reply
 
@@ -649,30 +1044,25 @@ class STAMPSessionSenderServicer(
         """RPC used to start a STAMP Session."""
 
         logger.debug('StartStampSession RPC invoked. Request: %s', request)
-        logger.info('Starting STAMP Session, SSID %d', request.ssid)
 
-        # If Sender is not initialized, return an error
-        if not self.is_initialized:
+        # Try to start the STAMP Session
+        try:
+            self.stamp_session_sender.start_stamp_session(ssid=request.ssid)
+        except NodeNotInitializedError:
+            # The Reflector is not initialized
             logging.error('Sender node is not initialized')
             return stamp_sender_pb2.StartStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
                 description='Sender node is not initialized')
-
-        # Retrieve the STAMP Session from the sessions dict
-        logger.debug('Get Session, SSID %d', request.ssid)
-        session = self.stamp_sessions[request.ssid]
-
-        # If the session does not exist, return an error
-        logger.debug('Validate SSID %d', request.ssid)
-        if session is None:
+        except STAMPSessionNotFoundError:
+            # The STAMP Session does not exist
             logging.error('SSID %d not found', request.ssid)
             return stamp_sender_pb2.StartStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
                 description='SSID {ssid} not found'.format(ssid=request.ssid))
-
-        # If the session is already running, return an error
-        logger.debug('Checking if session is running, SSID %d', request.ssid)
-        if session.is_running:
+        except STAMPSessionRunningError:
+            # The STAMP Session is currently running; we cannot start an
+            # already running session
             logging.error('Cannot start STAMP Session (SSID %d): Session '
                           'already running', request.ssid)
             return stamp_sender_pb2.StartStampSenderSessionReply(
@@ -680,15 +1070,7 @@ class STAMPSessionSenderServicer(
                 description='STAMP Session (SSID {ssid}) already running'
                 .format(ssid=request.ssid))
 
-        # Start the sending thread
-        logger.info('Starting sending thread')
-        session.sending_thread.start()
-
-        # Set the flag "started"
-        session.set_started()
-
         # Return with success status code
-        logger.info('STAMP Session (SSID %d) started', request.ssid)
         logger.debug('StartStampSessionReply RPC completed')
         return stamp_sender_pb2.StartStampSenderSessionReply(
             status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
@@ -697,23 +1079,19 @@ class STAMPSessionSenderServicer(
         """RPC used to stop a running STAMP Session."""
 
         logger.debug('StopStampSession RPC invoked. Request: %s', request)
-        logger.info('Stopping STAMP Session, SSID %d', request.ssid)
 
-        # Retrieve the STAMP Session from the sessions dict
-        logger.debug('Get Session, SSID %d', request.ssid)
-        session = self.stamp_sessions.get(request.ssid, None)
-
-        # If the session does not exist, return an error
-        logger.debug('Validate SSID %d', request.ssid)
-        if session is None:
+        # Try to stop the STAMP Session
+        try:
+            self.stamp_session_sender.stop_stamp_session(ssid=request.ssid)
+        except STAMPSessionNotFoundError:
+            # The STAMP Session does not exist
             logging.error('SSID %d not found', request.ssid)
             return stamp_sender_pb2.StopStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
                 description='SSID {ssid} not found'.format(ssid=request.ssid))
-
-        # If the session is not running, return an error
-        logger.debug('Checking if session is running, SSID %d', request.ssid)
-        if not session.is_running:
+        except STAMPSessionNotRunningError:
+            # The STAMP Session is currently running; we cannot stop a
+            # non-running session
             logging.error('Cannot stop STAMP Session (SSID %d): Session '
                           'not running', request.ssid)
             return stamp_sender_pb2.StopStampSenderSessionReply(
@@ -721,15 +1099,7 @@ class STAMPSessionSenderServicer(
                 description='STAMP Session (SSID {ssid}) is not running'
                 .format(ssid=request.ssid))
 
-        # Stop the sending thread
-        logger.info('Stopping sending thread')
-        session.stop_flag.set()
-
-        # Clear the flag "started"
-        session.clear_started()
-
         # Return with success status code
-        logger.info('STAMP Session (SSID %d) stopped', request.ssid)
         logger.debug('StopStampSession RPC completed')
         return stamp_sender_pb2.StopStampSenderSessionReply(
             status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
@@ -738,31 +1108,25 @@ class STAMPSessionSenderServicer(
         """RPC used to destroy an existing STAMP Session."""
 
         logger.debug('DestroyStampSession RPC invoked. Request: %s', request)
-        logger.info('Destroying STAMP Session, SSID %d', request.ssid)
 
-        # If Sender is not initialized, return an error
-        if not self.is_initialized:
+        # Try to destroy the STAMP Session
+        try:
+            self.stamp_session_sender.destroy_stamp_session(ssid=request.ssid)
+        except NodeNotInitializedError:
+            # The Reflector is not initialized
             logging.error('Sender node is not initialized')
             return stamp_sender_pb2.DestroyStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
                 description='Sender node is not initialized')
-
-        # Retrieve the STAMP Session from the sessions dict
-        logger.debug('Get Session, SSID %d', request.ssid)
-        session = self.stamp_sessions.get(request.ssid, None)
-
-        # If the session does not exist, return an error
-        logger.debug('Validate SSID %d', request.ssid)
-        if session is None:
+        except STAMPSessionNotFoundError:
+            # The STAMP Session does not exist
             logging.error('SSID %d not found', request.ssid)
             return stamp_sender_pb2.DestroyStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
                 description='SSID {ssid} not found'.format(ssid=request.ssid))
-
-        # If the session is running, we cannot destory it and we need to
-        # return an error
-        logger.debug('Checking if session is running, SSID %d', request.ssid)
-        if session.is_running:
+        except STAMPSessionRunningError:
+            # The STAMP Session is currently running; we cannot destroy a
+            # running session
             logging.error('Cannot destroy STAMP Session (SSID %d): Session '
                           'is currently running', request.ssid)
             return stamp_sender_pb2.DestroyStampSenderSessionReply(
@@ -770,13 +1134,7 @@ class STAMPSessionSenderServicer(
                 description='STAMP Session (SSID {ssid}) is running'
                 .format(ssid=request.ssid))
 
-        logger.info('Removing Session with SSID %d', request.ssid)
-
-        # Remove the STAMP session from the list of existing sessions
-        del self.stamp_sessions[request.ssid]
-
         # Return with success status code
-        logger.info('STAMP Session (SSID %d) destroyed', request.ssid)
         logger.debug('DestroyStampSession RPC completed')
         return stamp_sender_pb2.DestroyStampSenderSessionReply(
             status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
@@ -785,46 +1143,37 @@ class STAMPSessionSenderServicer(
         """RPC used to collect the results of STAMP Session."""
 
         logger.debug('GetStampTestResults RPC invoked. Request: %s', request)
-        logger.info('Getting STAMP Session Results, SSID %d', request.ssid)
 
-        # If Sender is not initialized, return an error
-        if not self.is_initialized:
+        # Try to collect the results of the STAMP Session
+        try:
+            results = self.stamp_session_sender.get_stamp_session_results(
+                ssid=request.ssid)
+        except NodeNotInitializedError:
+            # The Reflector is not initialized
             logging.error('Sender node is not initialized')
             return stamp_sender_pb2.StampResults(
                 status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
                 description='Sender node is not initialized')
-
-        # Retrieve the STAMP Session from the sessions dict
-        logger.debug('Get STAMP Session, SSID %d', request.ssid)
-        session = self.stamp_sessions.get(request.ssid, None)
-
-        # If the session does not exist, return an error
-        logger.debug('Validate SSID %d', request.ssid)
-        if session is None:
+        except STAMPSessionNotFoundError:
+            # The STAMP Session does not exist
             logging.error('SSID %d not found', request.ssid)
             return stamp_sender_pb2.StampResults(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
                 description='SSID {ssid} not found'.format(ssid=request.ssid))
 
-        logger.info('Collecting results for SSID %d', request.ssid)
-
         # Prepare the gRPC reply
         reply = stamp_sender_pb2.StampResults()
 
         # Populate the gRPC reply with the test results
-        count = 0
-        for result in session.get_test_results():
+        for result in results:
             res = reply.results.add()
             res.ssid = result.ssid
-            res.test_pkt_tx_timestamp = result.test_pkt_tx_timestamp
-            res.reply_pkt_tx_timestamp = result.reply_pkt_tx_timestamp
-            res.reply_pkt_rx_timestamp = result.reply_pkt_rx_timestamp
-            res.test_pkt_rx_timestamp = result.test_pkt_rx_timestamp
-            count += 1
+            res.test_pkt_tx_timestamp = result['test_pkt_tx_timestamp']
+            res.reply_pkt_tx_timestamp = result['reply_pkt_tx_timestamp']
+            res.reply_pkt_rx_timestamp = result['reply_pkt_rx_timestamp']
+            res.test_pkt_rx_timestamp = result['test_pkt_rx_timestamp']
 
         # Set status code and return
-        logger.info('Returning %d results for STAMP Session (SSID %d)',
-                    count, request.ssid)
         logger.debug('StampResults RPC completed')
         reply.status = common_pb2.StatusCode.STATUS_CODE_SUCCESS
         return reply
@@ -852,11 +1201,14 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
     None
     """
 
+    # Create a STAMP Session Sender object
+    stamp_session_sender = STAMPSessionSender()
+
     # Create the gRPC server
     logger.debug('Creating the gRPC server')
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     stamp_sender_pb2_grpc.add_STAMPSessionSenderServiceServicer_to_server(
-        STAMPSessionSenderServicer(), server)
+        STAMPSessionSenderServicer(stamp_session_sender), server)
 
     # Add secure or insecure port, depending on the "secure_mode" chosen
     if secure_mode:
