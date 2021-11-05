@@ -89,16 +89,13 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 
-class STAMPSessionReflectorServicer(
-        stamp_reflector_pb2_grpc.STAMPSessionReflectorService):
+class STAMPSessionReflector:
     """
     Provides methods that implement the functionalities of a STAMP Session
     Reflector.
     """
 
     def __init__(self):
-        # Initialize super class STAMPSessionReflectorService
-        super().__init__()
         # A dict containing information about the running STAMP Sessions
         self.stamp_sessions = {}
         # Reflector UDP port
@@ -713,6 +710,21 @@ class STAMPSessionReflectorServicer(
             prn=self.stamp_test_packet_received)
         return sniffer
 
+
+class STAMPSessionReflectorServicer(
+        stamp_reflector_pb2_grpc.STAMPSessionReflectorService):
+    """
+    Provides methods that allow a controller to control the STAMP Session
+    Reflector through the gRPC protocol.
+    """
+
+    def __init__(self, stamp_session_reflector):
+        # Initialize super class STAMPSessionReflectorService
+        super().__init__()
+        # Reference to the STAMPSessionReflector to be controlled through the
+        # gRPC interface
+        self.stamp_session_reflector = stamp_session_reflector
+
     def Init(self, request, context):
         """RPC used to configure the Session Reflector."""
 
@@ -721,7 +733,7 @@ class STAMPSessionReflectorServicer(
 
         # Try to initialize the Reflector node
         try:
-            self.init(
+            self.stamp_session_reflector.init(
                 reflector_udp_port=request.reflector_udp_port,
                 interfaces=request.interfaces,
                 stamp_source_ipv6_address=request.stamp_source_ipv6_address
@@ -770,7 +782,7 @@ class STAMPSessionReflectorServicer(
         # operation cannot be performed and we return an error to the
         # controller
         try:
-            self.reset()
+            self.stamp_session_reflector.reset()
         except ResetSTAMPNodeError:
             logger.error('Reset RPC failed')
             return stamp_reflector_pb2.ResetStampReflectorReply(
@@ -811,7 +823,7 @@ class STAMPSessionReflectorServicer(
         # Try to create the STAMP Session
         try:
             auth_mode, key_chain, timestamp_format, session_reflector_mode = \
-                self.create_stamp_session(
+                self.stamp_session_reflector.create_stamp_session(
                     ssid=request.ssid,
                     stamp_source_ipv6_address=stamp_source_ipv6_address,
                     auth_mode=auth_mode,
@@ -870,7 +882,7 @@ class STAMPSessionReflectorServicer(
 
         # Try to start the STAMP Session
         try:
-            self.start_stamp_session(ssid=request.ssid)
+            self.stamp_session_reflector.start_stamp_session(ssid=request.ssid)
         except NodeNotInitializedError:
             # The Reflector is not initialized
             logger.error('Cannot complete the requested operation: Reflector '
@@ -910,7 +922,7 @@ class STAMPSessionReflectorServicer(
 
         # Try to stop the STAMP Session
         try:
-            self.stop_stamp_session(ssid=request.ssid)
+            self.stamp_session_reflector.stop_stamp_session(ssid=request.ssid)
         except STAMPSessionNotFoundError:
             # The STAMP Session does not exist
             logger.error('Cannot complete the requested operation: SSID %d '
@@ -943,7 +955,8 @@ class STAMPSessionReflectorServicer(
 
         # Try to destroy the STAMP Session
         try:
-            self.destroy_stamp_session(ssid=request.ssid)
+            self.stamp_session_reflector.destroy_stamp_session(
+                ssid=request.ssid)
         except NodeNotInitializedError:
             # The Reflector is not initialized
             logger.error('Cannot complete the requested operation: Reflector '
@@ -998,12 +1011,15 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
     None
     """
 
+    # Create a STAMP Session Reflector object
+    stamp_session_reflector = STAMPSessionReflector()
+
     # Create the gRPC server
     logger.debug('Creating the gRPC server')
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     stamp_reflector_pb2_grpc \
         .add_STAMPSessionReflectorServiceServicer_to_server(
-            STAMPSessionReflectorServicer(), server)
+            STAMPSessionReflectorServicer(stamp_session_reflector), server)
 
     # Add secure or insecure port, depending on the "secure_mode" chosen
     if secure_mode:

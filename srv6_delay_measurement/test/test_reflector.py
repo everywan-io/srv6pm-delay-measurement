@@ -1,6 +1,6 @@
 from time import sleep
 
-from reflector import STAMPSessionReflectorServicer
+from reflector import STAMPSessionReflector
 
 from libs.libstamp import (
     AuthenticationMode,
@@ -8,7 +8,8 @@ from libs.libstamp import (
     SessionReflectorMode
 )
 
-reflector = STAMPSessionReflectorServicer()
+# Create a STAMP Session Reflector
+reflector = STAMPSessionReflector()
 
 reflector.init(
     reflector_udp_port=50052,
