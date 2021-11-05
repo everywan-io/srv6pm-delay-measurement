@@ -369,14 +369,16 @@ class STAMPSessionSenderServicer(
         self.sender_udp_port = None
 
         # Close the auxiliary UDP socket
-        logger.info('Closing the auxiliary UDP socket')
-        self.auxiliary_socket.close()
-        self.auxiliary_socket = None
+        if is not None:
+            logger.info('Closing the auxiliary UDP socket')
+            self.auxiliary_socket.close()
+            self.auxiliary_socket = None
 
         # Close the Scapy socket
         logger.info('Closing the socket')
-        self.sender_socket.close()
-        self.sender_socket = None
+        if self.sender_socket is not None:
+            self.sender_socket.close()
+            self.sender_socket = None
 
         # Clear interface information
         logger.info('Clearing the interface information')
