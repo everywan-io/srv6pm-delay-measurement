@@ -120,7 +120,8 @@ class STAMPSessionReflectorServicer(
         # If it is None, the loopback IPv6 address will be used.
         self.stamp_source_ipv6_address = None
 
-    def init(self, reflector_udp_port, interfaces=None, stamp_source_ipv6_address=None):
+    def init(self, reflector_udp_port, interfaces=None,
+             stamp_source_ipv6_address=None):
         """
         Initialize the STAMP Session Reflector and prepare it to run STAMP
         Sessions.
@@ -163,7 +164,8 @@ class STAMPSessionReflectorServicer(
                      reflector_udp_port)
         if reflector_udp_port not in range(1, 65536):
             logger.error('Invalid UDP port %d', reflector_udp_port)
-            raise InvalidArgumentError(type='udp_port', value=str(reflector_udp_port))
+            raise InvalidArgumentError(type='udp_port',
+                                       value=str(reflector_udp_port))
         logger.debug('UDP port %d is valid', reflector_udp_port)
 
         # Extract the interface from the gRPC message
@@ -310,7 +312,10 @@ class STAMPSessionReflectorServicer(
         # Success
         logger.info('Reset completed')
 
-    def create_stamp_session(self, ssid, stamp_source_ipv6_address, auth_mode, key_chain, timestamp_format, session_reflector_mode, reflector_udp_port, segments):
+    def create_stamp_session(self, ssid, stamp_source_ipv6_address, auth_mode,
+                             key_chain, timestamp_format,
+                             session_reflector_mode, reflector_udp_port,
+                             segments):
         """
         Create a new STAMP Session. Newly created sessions are in non-running
         state. To start a session, you need to use the start_stamp_session
@@ -393,7 +398,7 @@ class STAMPSessionReflectorServicer(
         # Add the STAMP session to the STAMP sessions dict
         self.stamp_sessions[ssid] = stamp_session
 
-        return auth_mode, key_chain, timestamp_format, session_reflector_mode 
+        return auth_mode, key_chain, timestamp_format, session_reflector_mode
 
     def start_stamp_session(self, ssid):
         """
@@ -438,7 +443,7 @@ class STAMPSessionReflectorServicer(
         if session.is_running:
             logger.error('Cannot start STAMP Session (SSID %d): Session '
                          'already running', ssid)
-            raise STAMPSessionRunningError(ssid=ssid)   
+            raise STAMPSessionRunningError(ssid=ssid)
 
         # Set the flag "started"
         session.set_started()
@@ -479,7 +484,7 @@ class STAMPSessionReflectorServicer(
         if not session.is_running:
             logger.error('Cannot stop STAMP Session (SSID %d): Session '
                          'not running', ssid)
-            raise STAMPSessionNotRunningError(ssid=ssid)  
+            raise STAMPSessionNotRunningError(ssid=ssid)
 
         # Clear the flag "started"
         session.clear_started()
@@ -528,7 +533,7 @@ class STAMPSessionReflectorServicer(
         if session.is_running:
             logger.error('Cannot destroy STAMP Session (SSID %d): Session '
                          'is currently running', ssid)
-            raise STAMPSessionRunningError(ssid=ssid)  
+            raise STAMPSessionRunningError(ssid=ssid)
 
         logger.debug('Removing Session with SSID %d', ssid)
 
@@ -723,27 +728,31 @@ class STAMPSessionReflectorServicer(
             )
         except NodeInitializedError:
             # The Reflector has been already initialized, return an error
-            logger.error('Cannot complete the request operation: Reflector node has been already initialized')
+            logger.error('Cannot complete the request operation: Reflector '
+                         'node has been already initialized')
             return stamp_reflector_pb2.InitStampReflectorReply(
                 status=common_pb2.StatusCode.STATUS_CODE_ALREADY_INITIALIZED,
                 description='Reflector node has been already initialized')
         except NodeInitializedError:
             # The provided UDP port is not valid, return an error
-            logger.error('Cannot complete the request operation: Invalid UDP port %d', request.reflector_udp_port)
+            logger.error('Cannot complete the request operation: Invalid UDP '
+                         'port %d', request.reflector_udp_port)
             return stamp_reflector_pb2.InitStampReflectorReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
                 description='Invalid UDP port {port}'
                             .format(port=request.reflector_udp_port))
         except NodeInitializedError:
             # The provided UDP port is invalid, return an error
-            logger.error('Cannot complete the request operation: Invalid UDP port %d', request.reflector_udp_port)
+            logger.error('Cannot complete the request operation: Invalid UDP '
+                         'port %d', request.reflector_udp_port)
         except InternalError as err:
             # Failed to create a UDP socket, return an error
-            logger.error('Cannot complete the request operation: Cannot create UDP socket: %s', err)
+            logger.error('Cannot complete the request operation: Cannot '
+                         'create UDP socket: %s', err)
             return stamp_reflector_pb2.InitStampReflectorReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
-                description='Cannot create UDP socket: {err}'.format(err=err.msg))
-
+                description='Cannot create UDP socket: {err}'
+                            .format(err=err.msg))
 
         # Return with success status code
         logger.info('Initialization completed')
@@ -802,16 +811,16 @@ class STAMPSessionReflectorServicer(
         # Try to create the STAMP Session
         try:
             auth_mode, key_chain, timestamp_format, session_reflector_mode = \
-            self.create_stamp_session(
-                ssid=request.ssid,
-                stamp_source_ipv6_address=stamp_source_ipv6_address,
-                auth_mode=auth_mode,
-                key_chain=key_chain,
-                timestamp_format=timestamp_format,
-                session_reflector_mode=session_reflector_mode,
-                reflector_udp_port=request.stamp_params.reflector_udp_port,
-                segments=list(request.return_sidlist.segments)
-            )
+                self.create_stamp_session(
+                    ssid=request.ssid,
+                    stamp_source_ipv6_address=stamp_source_ipv6_address,
+                    auth_mode=auth_mode,
+                    key_chain=key_chain,
+                    timestamp_format=timestamp_format,
+                    session_reflector_mode=session_reflector_mode,
+                    reflector_udp_port=request.stamp_params.reflector_udp_port,
+                    segments=list(request.return_sidlist.segments)
+                )
         except NodeNotInitializedError:
             # The Reflector is not initialized
             # To create the STAMP Session, the Reflector node needs to be
@@ -864,19 +873,23 @@ class STAMPSessionReflectorServicer(
             self.start_stamp_session(ssid=request.ssid)
         except NodeNotInitializedError:
             # The Reflector is not initialized
-            logger.error('Cannot complete the requested operation: Reflector node is not initialized')
+            logger.error('Cannot complete the requested operation: Reflector '
+                         'node is not initialized')
             return stamp_reflector_pb2.StartStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
                 description='Reflector node is not initialized')
         except STAMPSessionNotFoundError:
             # The STAMP Session does not exist
-            logger.error('Cannot complete the requested operation: SSID %d not found', request.ssid)
+            logger.error('Cannot complete the requested operation: SSID %d '
+                         'not found', request.ssid)
             return stamp_reflector_pb2.StartStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
                 description='SSID {ssid} not found'.format(ssid=request.ssid))
         except STAMPSessionRunningError:
-            # The STAMP Session is currently running; we cannot start an already running session
-            logger.error('Cannot complete the requested operation: Cannot start STAMP Session (SSID %d): Session '
+            # The STAMP Session is currently running; we cannot start an
+            # already running session
+            logger.error('Cannot complete the requested operation: Cannot '
+                         'start STAMP Session (SSID %d): Session '
                          'already running', request.ssid)
             return stamp_reflector_pb2.StartStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_RUNNING,
@@ -900,13 +913,16 @@ class STAMPSessionReflectorServicer(
             self.stop_stamp_session(ssid=request.ssid)
         except STAMPSessionNotFoundError:
             # The STAMP Session does not exist
-            logger.error('Cannot complete the requested operation: SSID %d not found', request.ssid)
+            logger.error('Cannot complete the requested operation: SSID %d '
+                         'not found', request.ssid)
             return stamp_reflector_pb2.StopStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
                 description='SSID {ssid} not found'.format(ssid=request.ssid))
         except STAMPSessionRunningError:
-            # The STAMP Session is currently running; we cannot stop a non-running session
-            logger.error('Cannot complete the requested operation: Cannot stop STAMP Session (SSID %d): Session '
+            # The STAMP Session is currently running; we cannot stop a
+            # non-running session
+            logger.error('Cannot complete the requested operation: Cannot '
+                         'stop STAMP Session (SSID %d): Session '
                          'not running', request.ssid)
             return stamp_reflector_pb2.StopStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_RUNNING,
@@ -930,26 +946,28 @@ class STAMPSessionReflectorServicer(
             self.destroy_stamp_session(ssid=request.ssid)
         except NodeNotInitializedError:
             # The Reflector is not initialized
-            logger.error('Cannot complete the requested operation: Reflector node is not initialized')
+            logger.error('Cannot complete the requested operation: Reflector '
+                         'node is not initialized')
             return stamp_reflector_pb2.DestroyStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
                 description='Reflector node is not initialized')
         except STAMPSessionNotFoundError:
             # The STAMP Session does not exist
-            logger.error('Cannot complete the requested operation: SSID %d not found', request.ssid)
+            logger.error('Cannot complete the requested operation: SSID %d '
+                         'not found', request.ssid)
             return stamp_reflector_pb2.DestroyStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
                 description='SSID {ssid} not found'.format(ssid=request.ssid))
         except STAMPSessionRunningError:
-            # The STAMP Session is currently running; we cannot destroy a running session
-            logger.error('Cannot complete the requested operation: Cannot destroy STAMP Session (SSID %d): Session '
+            # The STAMP Session is currently running; we cannot destroy a
+            # running session
+            logger.error('Cannot complete the requested operation: Cannot '
+                         'destroy STAMP Session (SSID %d): Session '
                          'is currently running', request.ssid)
             return stamp_reflector_pb2.DestroyStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_RUNNING,
                 description='STAMP Session (SSID {ssid}) is running'
                 .format(ssid=request.ssid))
-
-
 
         # Return with success status code
         logger.info('STAMP Session (SSID %d) destroyed', request.ssid)
