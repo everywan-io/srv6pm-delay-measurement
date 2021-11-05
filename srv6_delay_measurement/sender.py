@@ -355,12 +355,12 @@ class STAMPSessionSenderServicer(
         self.stamp_packet_receiver = None
 
         # Remove ip6tables rule for STAMP packets
-        rule_exists = os.system('ip6tables -C INPUT -p udp --dport {port} '
-                                '-j DROP'
+        rule_exists = os.system('ip6tables -t raw -C PREROUTING -p udp --dport {port} '
+                                '-j DROP >/dev/null 2>&1'
                                 .format(port=self.sender_udp_port)) == 0
         if rule_exists:
             logger.info('Clearing ip6tables rule for STAMP packets')
-            os.system('ip6tables -D INPUT -p udp --dport {port} -j DROP'
+            os.system('ip6tables -t raw -D PREROUTING -p udp --dport {port} -j DROP'
                       .format(port=self.sender_udp_port))
         else:
             logger.info('ip6tables rule for STAMP packets does not exist. '
@@ -475,12 +475,12 @@ class STAMPSessionSenderServicer(
         # Set an iptables rule to drop STAMP packets after delivering them
         # to Scapy; this is required to avoid ICMP error messages when the
         # STAMP packets are delivered to a non-existing UDP port
-        rule_exists = os.system('ip6tables -C INPUT -p udp --dport {port} '
-                                '-j DROP'
+        rule_exists = os.system('ip6tables -t raw -C PREROUTING -p udp --dport {port} '
+                                '-j DROP >/dev/null 2>&1'
                                 .format(port=self.sender_udp_port)) == 0
         if not rule_exists:
             logger.info('Setting ip6tables rule for STAMP packets')
-            os.system('ip6tables -I INPUT -p udp --dport {port} -j DROP'
+            os.system('ip6tables -t raw -I PREROUTING -p udp --dport {port} -j DROP'
                       .format(port=self.sender_udp_port))
         else:
             logger.info('ip6tables rule for STAMP packets already exist. '
