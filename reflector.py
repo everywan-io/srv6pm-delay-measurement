@@ -246,7 +246,7 @@ class STAMPSessionReflectorServicer(
 
         # Get an IPv6 address to be used as source IPv6 address for the STAMP
         # packet.
-        # 
+        #
         # We support three methods (listed in order of preference):
         #    * stamp_source_ipv6_address specific for this STAMP Session
         #    * global stamp_source_ipv6_address
