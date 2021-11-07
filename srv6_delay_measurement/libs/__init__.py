@@ -17,40 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Exceptions used by STAMP library
+# Folder containing libraries used for SRv6 Delay Measurement project
 #
 # @author Carmine Scarpitta <carmine.scarpitta@uniroma2.it>
 #
 
 
-"""
-Exceptions used by STAMP library.
-"""
-
-
-class InvalidSTAMPPacketError(Exception):   # TODO togliere?
-    """
-    Exception raised for errors in the STAMP packet.
-
-    Attributes
-    ----------
-        packet : scapy.packet.Packet
-            STAMP packet which caused the error.
-        message : str
-            Explanation of the error.
-    """
-
-    def __init__(self, packet, message='STAMP packet is invalid'):
-        """
-        Constructs all the necessary attributes for the Invalid STAMP Packet
-         Error.
-
-        Parameters
-        ----------
-            packet : scapy.packet.Packet
-                STAMP packet which caused the error.
-        """
-
-        self.packet = packet
-        self.message = message
-        super().__init__(self.message)
+"""Folder containing libraries used for SRv6 Delay Measurement project."""

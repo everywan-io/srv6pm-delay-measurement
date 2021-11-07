@@ -38,6 +38,7 @@ import socket
 import grpc
 
 import common_pb2
+from srv6_delay_measurement.exceptions import ResetSTAMPNodeError
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
 
@@ -45,19 +46,24 @@ from scapy.arch.linux import L3PacketSocket
 from scapy.sendrecv import AsyncSniffer
 
 from utils import (
+    MAX_SSID,
+    MIN_SSID,
     NEXT_HEADER_IPV6_FIELD,
     NEXT_HEADER_SRH_FIELD,
     ROUTING_HEADER_PROTOCOL_NUMBER,
     UDP_DEST_PORT_FIELD,
     UDP_PROTOCOL_NUMBER,
     STAMPReflectorSession,
-    AuthenticationMode,
-    TimestampFormat,
-    SessionReflectorMode,
     grpc_to_py_resolve_defaults,
     py_to_grpc
 )
+
 from libs import libstamp
+from libs.libstamp import (
+    AuthenticationMode,
+    TimestampFormat,
+    SessionReflectorMode
+)
 
 
 # Default command-line arguments
@@ -107,12 +113,17 @@ class STAMPSessionReflectorServicer(
 
     def _reset(self):
         """
-        Helper function used to reset and stop the Reflector.
+        Helper function used to reset and stop the Reflector. In order to
+        reset a STAMP Reflector there must be no STAMP sessions.
 
         Returns
         -------
-        success : bool
-            True if reset performed sucessfully, False otherwise.
+        None.
+
+        Raises
+        ------
+        ResetSTAMPNodeError
+            If STAMP Sessions exist.
         """
 
         logger.info('Resetting STAMP Session-Reflector')
@@ -120,7 +131,7 @@ class STAMPSessionReflectorServicer(
         # Prevent reset if some sessions exist
         if len(self.stamp_sessions) != 0:
             logger.error('Reset failed: STAMP Sessions exist')
-            return False  # TODO raise an exception?
+            raise ResetSTAMPNodeError('Reset failed: STAMP Sessions exist')
 
         # Stop and destroy the receive thread
         logger.info('Stopping receive thread')
@@ -130,12 +141,12 @@ class STAMPSessionReflectorServicer(
         self.stamp_packet_receiver = None
 
         # Remove ip6tables rule for STAMP packets
-        rule_exists = os.system('ip6tables -C INPUT -p udp --dport {port} '
-                                '-j DROP'
+        rule_exists = os.system('ip6tables -t raw -C PREROUTING -p udp --dport {port} '
+                                '-j DROP >/dev/null 2>&1'
                                 .format(port=self.reflector_udp_port)) == 0
         if rule_exists:
             logger.info('Clearing ip6tables rule for STAMP packets')
-            os.system('ip6tables -D INPUT -p udp --dport {port} -j DROP'
+            os.system('ip6tables -t raw -D PREROUTING -p udp --dport {port} -j DROP'
                       .format(port=self.reflector_udp_port))
         else:
             logger.info('ip6tables rule for STAMP packets does not exist. '
@@ -164,7 +175,6 @@ class STAMPSessionReflectorServicer(
 
         # Success
         logger.info('Reset completed')
-        return True
 
     def is_session_valid(self, ssid):
         """
@@ -423,12 +433,12 @@ class STAMPSessionReflectorServicer(
         # Set an ip6tables rule to drop STAMP packets after delivering them
         # to Scapy; this is required to avoid ICMP error messages when the
         # STAMP packets are delivered to a non-existing UDP port
-        rule_exists = os.system('ip6tables -C INPUT -p udp --dport {port} '
-                                '-j DROP'
+        rule_exists = os.system('ip6tables -t raw -C PREROUTING -p udp --dport {port} '
+                                '-j DROP >/dev/null 2>&1'
                                 .format(port=self.reflector_udp_port)) == 0
         if not rule_exists:
             logger.info('Setting ip6tables rule for STAMP packets')
-            os.system('ip6tables -I INPUT -p udp --dport {port} -j DROP'
+            os.system('ip6tables -t raw -I PREROUTING -p udp --dport {port} -j DROP'
                       .format(port=self.reflector_udp_port))
         else:
             logger.warning('ip6tables rule for STAMP packets already exist. '
@@ -456,10 +466,12 @@ class STAMPSessionReflectorServicer(
         logger.debug('Reset RPC invoked. Request: %s', request)
         logger.info('Attempting to reset STAMP node')
 
-        # Reset the Session Reflector and check the return value
-        # If False is returned, the Reset command has failed and we return an
-        # error to the controller
-        if not self._reset():
+        # Reset the Session Reflector. If there are sessions, the reset
+        # operation cannot be performed and we return an error to the
+        # controller
+        try:
+            self._reset()
+        except ResetSTAMPNodeError:
             logger.error('Reset RPC failed')
             return stamp_reflector_pb2.ResetStampReflectorReply(
                 status=common_pb2.StatusCode.STATUS_CODE_RESET_FAILED,
@@ -499,6 +511,16 @@ class STAMPSessionReflectorServicer(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_EXISTS,
                 description='A session with SSID {ssid} already exists'
                             .format(ssid=request.ssid))
+
+        # Check if SSID is in the valid range
+        if request.ssid < MIN_SSID or request.ssid > MAX_SSID:
+            logging.error('SSID is outside the valid range [{%d}, {%d}]',
+                          MIN_SSID, MAX_SSID)
+            return stamp_reflector_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
+                description='SSID is outside the valid range '
+                            '[{min_ssid}, {max_ssid}]'
+                            .format(min_ssid=MIN_SSID, max_ssid=MAX_SSID))
 
         # Extract STAMP Source IPv6 address from the request message
         # This parameter is optional, therefore we set it to None if it is
@@ -792,10 +814,3 @@ if __name__ == '__main__':
     # Run the gRPC server and block forever
     logger.debug('Starting gRPC server')
     run_grpc_server(grpc_ip, grpc_port)
-
-# TODO Sender e Reflector separati dal servicer
-
-# TODO spostare funzioni specifiche per sender e reflector da utils a classi
-# specifiche
-
-# TODO aggiungere is started ai proto?

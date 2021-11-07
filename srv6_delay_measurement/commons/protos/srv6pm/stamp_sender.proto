@@ -261,7 +261,7 @@ message StampResults {
 // StampSessionResult reports the results of a single STAMP Session
 message StampSessionResult {
 
-  // ssid: Session Session Identifier
+  // ssid: STAMP Session Identifier
   uint32 ssid = 1;
 
   // test_pkt_tx_timestamp: STAMP Test packet transmission timestamp (taken on

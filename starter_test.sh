@@ -1,18 +1,19 @@
 #!/bin/bash
 
 # Variables
-GRPC_STUBS_PATH="./commons/protos/srv6pm/gen-py"
+ROOT_PATH="./srv6_delay_measurement"
+GRPC_STUBS_PATH="${ROOT_PATH}/commons/protos/srv6pm/gen-py"
 VENV_ACTIVATE_SCRIPT="./.venv/bin/activate"
-REFLECTOR_FILENAME="./test/test_stamp.py"
+TEST_FILENAME="${ROOT_PATH}/test/test_stamp.py"
 
 # Add the path to the gRPC stubs
-export PYTHONPATH="${PYTHONPATH}:${GRPC_STUBS_PATH}"
+export PYTHONPATH="${PYTHONPATH}:${GRPC_STUBS_PATH}:${ROOT_PATH}"
 
 # Activate virtual environment
 source ${VENV_ACTIVATE_SCRIPT}
 
 # Start the reflector
-python ${REFLECTOR_FILENAME}
+python ${TEST_FILENAME}
 
 # Deactivate virtual environment
 deactivate
