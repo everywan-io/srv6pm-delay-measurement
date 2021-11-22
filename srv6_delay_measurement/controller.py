@@ -1768,6 +1768,33 @@ class Controller:
                          .stamp_session_return_path_results.mean_delay)
             logger.debug('*********\n')
 
+    def get_measurement_sessions(self, ssid=None):
+        """
+        Return the STAMP Sessions.
+
+        Parameters
+        ----------
+        ssid : int, optional
+            The 16-bit STAMP Session Identifier (SSID). If None, return the
+            all the STAMP Sessions.
+
+        Returns
+        -------
+        stamp_sessions : list
+            The list of STAMP Sessions.
+        """
+
+        # If SSID is provided return the corresponding STAMP Session
+        if ssid is not None:
+            if ssid in self.stamp_sessions:
+                return [self.stamp_sessions[ssid]]
+            else:
+                # SSID not found, return an empty list
+                return []
+
+        # No SSID provided, return all the STAMP Sessions
+        return self.stamp_sessions
+
     def get_stamp_results(self, ssid, fetch_results_from_stamp=False):
         """
         Return the results stored in the controller.
