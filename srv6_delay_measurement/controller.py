@@ -28,6 +28,7 @@ Implementation of a SDN Controller capable of controlling STAMP Sessions.
 """
 
 import logging
+import time
 
 import grpc
 
@@ -559,6 +560,42 @@ def compute_mean_delay_welford(current_mean_delay, count, new_delay):
     return current_mean_delay + (float(new_delay) - current_mean_delay) / count
 
 
+class STAMPDelayResult:
+    """
+    A class to represent a STAMP Delay result.
+
+    ...
+
+    Attributes
+    ----------
+    id : int
+        An integer that uniquely identifies a result.
+    value : float
+        The value of the delay.
+    timestamp : float
+        The timestamp of the result.
+    """
+
+    def __init__(self, id, value, timestamp):
+        """
+        Constructs all the necessary attributes for the STAMP Delay Result.
+
+        Parameters
+        ----------
+        id : int
+            An integer that uniquely identifies a result.
+        value : float
+            The value of the delay.
+        timestamp : float
+            The timestamp of the result.
+        """
+
+        # Initialize all the attributes
+        self.id = id
+        self.value = value
+        self.timestamp = timestamp
+
+
 class STAMPSessionResults:
     """
     A class to represent STAMP Session results.
@@ -577,6 +614,8 @@ class STAMPSessionResults:
         The mean delay.
     count_packets : int
         The number of STAMP results.
+    last_result_id : int
+        Last STAMP Delay result identifier.
 
     Methods
     -------
@@ -607,6 +646,7 @@ class STAMPSessionResults:
         self.delays = list()
         self.mean_delay = 0.0
         self.count_packets = 0
+        self.last_result_id = -1
 
     def add_new_delay(self, new_delay):
         """
@@ -622,11 +662,17 @@ class STAMPSessionResults:
         None
         """
 
+        # Increase result identifier
+        self.last_result_id += 1
         # Increase packets count
         self.count_packets += 1
         # Store the new delay, eventually
         if self.store_individual_delays:
-            self.delays.add(new_delay)
+            self.delays.add(STAMPDelayResult(
+                id=self.last_result_id,
+                value=new_delay,
+                timestamp=time.time()
+            ))
         # Update the mean delay
         self._update_mean_delay(new_delay)
 
