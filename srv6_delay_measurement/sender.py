@@ -260,6 +260,7 @@ class STAMPSessionSender:
         sniffer = AsyncSniffer(
             iface=self.stamp_interfaces,
             filter=stamp_filter,
+            store=False,
             prn=self.stamp_reply_packet_received)
         return sniffer
 

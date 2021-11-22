@@ -718,6 +718,7 @@ class STAMPSessionReflector:
         sniffer = AsyncSniffer(
             iface=self.stamp_interfaces,
             filter=stamp_filter,
+            store=False,
             prn=self.stamp_test_packet_received)
         return sniffer
 
