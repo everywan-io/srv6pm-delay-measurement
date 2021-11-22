@@ -814,7 +814,7 @@ class Controller:
         # Check if node_id is already taken
         if self.stamp_nodes.get(node_id, None) is not None:
             raise NodeIdAlreadyExistsError
-        
+
         # Create a STAMP Sender object and store it
         node = STAMPReflector(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
