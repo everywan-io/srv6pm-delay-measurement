@@ -91,6 +91,8 @@ class STAMPNode:
         The gRPC port address of the STAMP node.
     ip : str
         The IP address of the STAMP node.
+    node_name : str
+        A human-friendly name for the STAMP node.
     interfaces : list, optional
         The list of the interfaces on which the STAMP node will listen for
          STAMP packets. If this parameter is None, the node will listen on all
@@ -111,8 +113,8 @@ class STAMPNode:
     -------
     """
 
-    def __init__(self, node_id, grpc_ip, grpc_port, ip, interfaces=None,
-                 stamp_source_ipv6_address=None):
+    def __init__(self, node_id, grpc_ip, grpc_port, ip, node_name=None,
+                 interfaces=None, stamp_source_ipv6_address=None):
         """
         A class to represent a STAMP node.
 
@@ -126,6 +128,10 @@ class STAMPNode:
             The gRPC port address of the STAMP node.
         ip : str
             The IP address of the STAMP node.
+        node_name : str, optional
+            A human-friendly name for the STAMP node. If this parameter is
+            None, the node identifier (node_id) is used as node name
+            (default: None).
         interfaces : list, optional
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
@@ -143,6 +149,7 @@ class STAMPNode:
         self.grpc_ip = grpc_ip
         self.grpc_port = grpc_port
         self.ip = ip
+        self.node_name = node_name if node_name is not None else node_id
         self.interfaces = interfaces
         self.stamp_source_ipv6_address = stamp_source_ipv6_address
         # gRPC Channel and Stub are initially empty
@@ -179,6 +186,8 @@ class STAMPSender(STAMPNode):
     udp_port : int
         UDP port used by STAMP. If it is None, the Sender port will be chosen
          randomly.
+    node_name : str
+        A human-friendly name for the STAMP node.
     interfaces : list
         The list of the interfaces on which the STAMP node will listen for
          STAMP packets. If this parameter is None, the node will listen on all
@@ -194,7 +203,8 @@ class STAMPSender(STAMPNode):
     """
 
     def __init__(self, node_id, grpc_ip, grpc_port, ip, udp_port=None,
-                 interfaces=None, stamp_source_ipv6_address=None):
+                 node_name=None, interfaces=None,
+                 stamp_source_ipv6_address=None):
         """
         A class to represent a STAMP Sender.
 
@@ -211,6 +221,10 @@ class STAMPSender(STAMPNode):
         udp_port : int, optional
             UDP port used by STAMP. If it is None, the Sender port will be
              chosen randomly (default None).
+        node_name : str, optional
+            A human-friendly name for the STAMP node. If this parameter is
+            None, the node identifier (node_id) is used as node name
+            (default: None).
         interfaces : list, optional
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
@@ -224,8 +238,10 @@ class STAMPSender(STAMPNode):
         """
 
         # Set parameters for a generic STAMP node
-        super().__init__(node_id, grpc_ip, grpc_port, ip, interfaces,
-                         stamp_source_ipv6_address)
+        super().__init__(node_id=node_id, grpc_ip=grpc_ip,
+                         grpc_port=grpc_port, ip=ip, node_name=node_name,
+                         interfaces=interfaces,
+                         stamp_source_ipv6_address=stamp_source_ipv6_address)
         # Set the UDP port of the Sender
         self.udp_port = udp_port
 
@@ -248,6 +264,8 @@ class STAMPReflector(STAMPNode):
         The IP address of the STAMP node.
     udp_port : int
         UDP port used by STAMP.
+    node_name : str
+        A human-friendly name for the STAMP node.
     interfaces : list
         The list of the interfaces on which the STAMP node will listen for
          STAMP packets. If this parameter is None, the node will listen on all
@@ -263,7 +281,8 @@ class STAMPReflector(STAMPNode):
     """
 
     def __init__(self, node_id, grpc_ip, grpc_port, ip, udp_port,
-                 interfaces=None, stamp_source_ipv6_address=None):
+                 node_name=None, interfaces=None,
+                 stamp_source_ipv6_address=None):
         """
         Constructs all the necessary attributes for the STAMP Reflector object.
 
@@ -279,6 +298,10 @@ class STAMPReflector(STAMPNode):
             The IP address of the STAMP node.
         udp_port : int
             UDP port used by STAMP.
+        node_name : str, optional
+            A human-friendly name for the STAMP node. If this parameter is
+            None, the node identifier (node_id) is used as node name
+            (default: None).
         interfaces : list, optional
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
@@ -292,8 +315,10 @@ class STAMPReflector(STAMPNode):
         """
 
         # Set parameters for a generic STAMP node
-        super().__init__(node_id, grpc_ip, grpc_port, ip, interfaces,
-                         stamp_source_ipv6_address)
+        super().__init__(node_id=node_id, grpc_ip=grpc_ip,
+                         grpc_port=grpc_port, ip=ip, node_name=node_name,
+                         interfaces=interfaces,
+                         stamp_source_ipv6_address=stamp_source_ipv6_address)
         # Set the UDP port of the Reflector
         self.udp_port = udp_port
 
