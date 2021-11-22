@@ -308,6 +308,8 @@ class STAMPSession:
     ----------
     ssid : int
         16-bit Segment Session Identifier (SSID) of the STAMP Session.
+    description : str
+        A string which describes the STAMP Session.
     sender : controller.STAMPSender
         An object representing the STAMP Session Sender.
     reflector : controller.STAMPReflector
@@ -349,11 +351,12 @@ class STAMPSession:
     -------
     """
 
-    def __init__(self, ssid,  sender, reflector, sidlist, return_sidlist,
-                 interval, auth_mode, sender_key_chain, reflector_key_chain,
-                 sender_timestamp_format, reflector_timestamp_format,
-                 packet_loss_type, delay_measurement_mode,
-                 session_reflector_mode, store_individual_delays=False):
+    def __init__(self, ssid, description, sender, reflector, sidlist,
+                 return_sidlist, interval, auth_mode, sender_key_chain,
+                 reflector_key_chain, sender_timestamp_format,
+                 reflector_timestamp_format, packet_loss_type,
+                 delay_measurement_mode, session_reflector_mode,
+                 store_individual_delays=False):
         """
         Constructs all the necessary attributes for the STAMP Reflector object.
 
@@ -361,6 +364,8 @@ class STAMPSession:
         ----------
         ssid : int
             16-bit Segment Session Identifier (SSID) of the STAMP Session.
+        description : str
+            A string which describes the STAMP Session.
         sender : controller.STAMPSender
             An object representing the STAMP Session Sender.
         reflector : controller.STAMPReflector
@@ -394,6 +399,7 @@ class STAMPSession:
 
         # Set STAMP session parameters
         self.ssid = ssid
+        self.description = description
         self.sender = sender
         self.reflector = reflector
         self.sidlist = sidlist
@@ -1358,7 +1364,7 @@ class Controller:
                              session_reflector_mode=None,
                              store_individual_delays=False,
                              sender_source_ip=None,
-                             reflector_source_ip=None):
+                             reflector_source_ip=None, description=None):
         """
         Allocate a new SSID and create a STAMP Session (the Sender and the
          Reflector are informed about the new Session).
@@ -1419,6 +1425,10 @@ class Controller:
             packets sent by the Reflector. If None, the address stored in the
             STAMP Reflector instance will be used as STAMP Source Address
             (default: None).
+        description : str, optional
+            An optional string which describes the STAMP Session to be
+            created. If this parameter is None, the SSID is used as Session
+            description (default: None).
 
         Returns
         -------
@@ -1515,9 +1525,13 @@ class Controller:
 
         auth_mode = sender_reply.stamp_params.auth_mode
 
+        # Use SSID as STAMP Session description if description has been not set
+        description = description if description is not None else ssid
+
         # Create a STAMP Session object
         stamp_session = STAMPSession(
             ssid=ssid,
+            description=description,
             sender=sender,
             reflector=reflector,
             sidlist=sidlist,
