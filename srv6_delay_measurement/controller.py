@@ -1795,9 +1795,9 @@ class Controller:
         # No SSID provided, return all the STAMP Sessions
         return self.stamp_sessions
 
-    def get_stamp_results(self, ssid, fetch_results_from_stamp=False):
+    def get_stamp_results_average(self, ssid, fetch_results_from_stamp=False):
         """
-        Return the results stored in the controller.
+        Return the results (average delays only) stored in the controller.
 
         Parameters
         ----------
@@ -1814,6 +1814,46 @@ class Controller:
             The mean delay of the direct path (Sender -> Reflector).
         return_path_mean_delay : float
             The mean delay of the return path (Reflector -> Sender).
+
+        Raises
+        ------
+        STAMPSessionNotFoundError
+            If the STAMP Session does not exist.
+        """
+
+        logger.debug('Get results average for STAMP Session, ssid: %d', ssid)
+
+        # Get the results
+        direct_path_results, return_path_results = \
+            self.get_stamp_results(self, ssid, fetch_results_from_stamp)
+
+        # Return the mean delay
+        return (direct_path_results.mean_delay, return_path_results.mean_delay)
+
+    def get_stamp_results(self, ssid, fetch_results_from_stamp=False):
+        """
+        Return the results stored in the controller.
+
+        Parameters
+        ----------
+        ssid : int
+            The 16-bit STAMP Session Identifier (SSID).
+        fetch_results_from_stamp : bool, optional
+            Whether to fetch the new results from the STAMP Sender. If
+            False, only the results already stored in the controller inventory
+            are returned (default: False).
+
+        Returns
+        -------
+        direct_path_results : controller.STAMPSessionResults
+            The delay results of the direct path (Sender -> Reflector).
+        return_path_results : controller.STAMPSessionResults
+            The delay results of the return path (Reflector -> Sender).
+
+        Raises
+        ------
+        STAMPSessionNotFoundError
+            If the STAMP Session does not exist.
         """
 
         logger.debug('Get results for STAMP Session, ssid: %d', ssid)
@@ -1829,8 +1869,8 @@ class Controller:
             self.fetch_stamp_results(ssid)
 
         # Return the mean delay
-        return (stamp_session.stamp_session_direct_path_results.mean_delay,
-                stamp_session.stamp_session_return_path_results.mean_delay)
+        return (stamp_session.stamp_session_direct_path_results,
+                stamp_session.stamp_session_return_path_results)
 
     def print_stamp_results(self, ssid, fetch_results_from_stamp=False):
         """
