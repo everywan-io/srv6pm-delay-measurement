@@ -1,0 +1,513 @@
+/*
+##########################################################################
+# Copyright (C) 2021 Carmine Scarpitta - (University of Rome "Tor Vergata")
+# www.uniroma2.it/netgroup
+#
+#
+# Licensed under the Apache License, Version 2.0 (the 'License');
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Protobuf definitions used to implement a SDN Controller for SRv6 PM Project
+#
+# @author Carmine Scarpitta <carmine.scarpitta@uniroma2.it>
+#
+*/
+
+
+/* This file contains several definitions useful to implement a SDN Controller
+for SRv6 PM Project */
+
+syntax = "proto3";
+
+package srv6pm;
+
+import "common.proto";
+
+// STAMPControllerService provides RPCs used to control a STAMP measurement
+// sessions
+service STAMPControllerService {
+
+  // RegisterStampSender: RPC used to register a new STAMP Sender
+  rpc RegisterStampSender (RegisterStampSenderRequest)
+                           returns (RegisterStampSenderReply) {}
+
+  // RegisterStampReflector: RPC used to register a new STAMP Reflector
+  rpc RegisterStampReflector (RegisterStampReflectorRequest)
+                              returns (RegisterStampReflectorReply) {}
+
+  // UnregisterStampNode: RPC used to unregister a STAMP node
+  rpc UnregisterStampNode (UnregisterStampNodeRequest)
+                            returns (UnregisterStampNodeReply) {}
+
+  // InitStampNode: RPC used to initialize the STAMP node
+  rpc InitStampNode (InitStampNodeRequest) returns (InitStampNodeReply) {}
+
+  // ResetStampNode: RPC used to initialize the STAMP node
+  rpc ResetStampNode (ResetStampNodeRequest) returns (ResetStampNodeReply) {}
+
+  // CreateStampSession: RPC used to create a STAMP Session
+  rpc CreateStampSession (CreateStampSessionRequest)
+                          returns (CreateStampSessionReply) {}
+
+  // StartStampSession: RPC used to start a STAMP Session
+  rpc StartStampSession (StartStampSessionRequest)
+                         returns (StartStampSessionReply) {}
+
+  // StopStampSession: RPC used to stop a STAMP Session
+  rpc StopStampSession (StopStampSessionRequest)
+                        returns (StopStampSessionReply) {}
+
+  // DestroyStampSession: RPC used to destroy an existing STAMP Session
+  rpc DestroyStampSession (DestroyStampSessionRequest)
+                            returns (DestroyStampSessionReply) {}
+
+  // GetStampResults: Return the results for a given STAMP Session
+  rpc GetStampResults (GetStampResultsRequest) returns (GetStampResultsReply) {}
+
+  // GetStampSessions: Return the STAMP measurement sessions
+  rpc GetStampSessions (GetStampSessionsRequest) returns (GetStampSessionsReply) {}
+
+}
+
+// RegisterStampSenderRequest carries the arguments returned by the
+// RegisterStampSender RPC
+message RegisterStampSenderRequest {
+
+  string node_id = 1;
+  string grpc_ip = 2;
+  uint32 grpc_port = 3;
+  string ip = 4;
+  uint32 udp_port = 5;
+  repeated string interfaces = 6;
+  string stamp_source_ipv6_address = 7;
+  bool initialize = 8;
+
+}
+
+// RegisterStampSenderReply carries the arguments returned by the
+// RegisterStampSender RPC
+message RegisterStampSenderReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// RegisterStampReflectorRequest carries the arguments returned by the
+// RegisterStampReflector RPC
+message RegisterStampReflectorRequest {
+
+  string node_id = 1;
+  string grpc_ip = 2;
+  uint32 grpc_port = 3;
+  string ip = 4;
+  uint32 udp_port = 5;
+  repeated string interfaces = 6;
+  string stamp_source_ipv6_address = 7;
+  bool initialize = 8;
+
+}
+
+// RegisterStampReflectorReply carries the arguments returned by the
+// RegisterStampReflector RPC
+message RegisterStampReflectorReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// UnregisterStampNode carries the parameters required to unregister the STAMP
+// Node
+message UnregisterStampNodeRequest {
+
+  // node_id: Identifier of the STAMP node to unregister
+  string node_id = 1;
+
+}
+
+// UnregisterStampNodeReply carries the arguments returned by the
+// UnregisterStampNode RPC
+message UnregisterStampNodeReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// CreateStampSessionRequest carries the parameters required to create a
+// STAMP Session
+message CreateStampSessionRequest {
+
+  // description is a human-friendly description of the STAMP Session
+  string description = 1;
+
+  // ID of the STAMP Sender
+  string sender_id = 2;
+
+  // ID of the STAMP Reflector
+  string reflector_id = 3;
+
+  // direct_sidlist is the segment list for the direct SRv6 path (i.e. the path
+  // Sender->Reflector)
+  SRv6Path direct_sidlist = 4;
+
+  // return_sidlist is the segment list for the direct SRv6 path (i.e. the path
+  // Reflector->Sender)
+  SRv6Path return_sidlist = 5;
+
+  // interval: time (in seconds) between two packets
+  uint32 interval = 6;
+
+  // duration: duration (in seconds) of the STAMP Session
+  uint32 duration = 7;
+
+  // stamp_params carries the STAMP parameters
+  StampParameters stamp_params = 8;
+
+  // sender_source_ipv6_address: IPv6 address to be used as source IPv6 address
+  // of the STAMP Test packets. This argument should be optional; if it is not
+  // provided, the stamp_source_ipv6_address value specified in the Init() RPC
+  // will be used as source IPv6 address of the STAMP Test packets.
+  string sender_source_ipv6_address = 9;
+
+  // reflector_source_ipv6_address: IPv6 address to be used as source IPv6 address
+  // of the STAMP Test Reply packets. This argument should be optional; if it is not
+  // provided, the stamp_source_ipv6_address value specified in the Init() RPC
+  // will be used as source IPv6 address of the STAMP Test Reply packets.
+  string reflector_source_ipv6_address = 10;
+
+}
+
+// CreateStampSessionReply carries the arguments returned by the
+// CreateStampSession RPC
+message CreateStampSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+  // ssid is the STAMP Session Identifier, defined in
+  // draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 3;
+
+  // stamp_params carries the STAMP parameters required by the STAMP protocol
+  StampParameters stamp_params = 4;
+
+}
+
+// StartStampSessionRequest carries the parameters required to start a
+// STAMP Session
+message StartStampSessionRequest {
+
+  // ssid is the STAMP Session Identifier, defined in
+  // draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// StampParameters carries the parameters required by the STAMP Session
+message StampParameters {
+
+  // auth_mode is the authentication mode to be used for the STAMP Session
+  // (e.g. UNAUTHENTICATED)
+  string auth_mode = 4;
+
+  // key_chain is required for the authenticated mode
+  string key_chain = 5;
+
+  // timestamp_format specifies the timestamp format to be used for the STAMP
+  // Session (e.g. NTP or PTPv2)
+  string timestamp_format = 6;
+ 
+  // packet_loss_type specifies the type of packet loss measurement to be
+  // performed (e.g. ROUND_TRIP, NEAR_END, FAR_END)
+  string packet_loss_type= 7;
+
+  // delay_measurement_mode specifies the delay measurement mode to be used for
+  // the STAMP session (e.g. ONE_WAY, TWO_WAY, LOOPBACK)
+  string delay_measurement_mode = 8;
+
+  // session_reflector_mode specifies the session mode to be used for the
+  // Reflector (e.g. STATELESS or STATEFUL)
+  string session_reflector_mode = 9;
+
+}
+
+// InitStampNodeRequest carries the parameters required to initialize the STAMP
+// Node
+message InitStampNodeRequest {
+
+  // node_id: Identifier of the STAMP node to initialize
+  string node_id = 1;
+
+}
+
+// InitStampNodeReply carries the arguments returned by the InitStampNode RPC
+message InitStampNodeReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// StopStampSessionRequest carries the parameters required to stop a
+// STAMP Session
+message StopStampSessionRequest {
+
+  // ssid: the STAMP Session Identifier of the STAMP Session to stop, defined
+  // in draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// DestroyStampSessionRequest carries the parameters required to destroy a
+// STAMP Session
+message DestroyStampSessionRequest {
+
+  // ssid: the STAMP Session Identifier of the STAMP Session to destroy,
+  // defined in draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// StartStampSessionReply carries the arguments returned by the StartStampSession RPC
+message StartStampSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// StopStampSessionReply carries the arguments returned by the StopStampSession
+// RPC
+message StopStampSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// DestroyStampSessionReply carries the arguments returned by the
+// DestroyStampSession RPC
+message DestroyStampSessionReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// GetStampResultsRequest carries the arguments required by the
+// GetStampResults RPC
+message GetStampResultsRequest {
+
+  // ssid: the STAMP Session Identifier of the STAMP Session to get results
+  // for, defined in draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+}
+
+// GetStampResultsReply reports the results of a single STAMP Session
+message GetStampResultsReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+  // results contain the results data
+  repeated StampSessionResults results = 3;
+
+}
+
+// StampSessionResults reports the results of a single STAMP Session
+message StampSessionResults {
+
+  // ssid: STAMP Session Identifier
+  uint32 ssid = 1;
+
+  // direct_sidlist is the segment list for the direct SRv6 path (i.e. the path
+  // Sender->Reflector)
+  SRv6Path direct_sidlist = 2;
+
+  // return_sidlist is the segment list for the direct SRv6 path (i.e. the path
+  // Reflector->Sender)
+  SRv6Path return_sidlist = 3;
+
+  // measurement_type: delay or loss
+  MeasurementType measurement_type = 4;
+
+  // measurement_direction: direct path, return path or both
+  MeasurementDirection measurement_direction = 5;
+
+  repeated StampSessionResultNb direct_path_results = 6;
+  repeated StampSessionResultNb return_path_results = 7;
+
+  double direct_path_average_delay = 8;
+  double return_path_average_delay = 9;
+
+}
+
+// MeasurementType: an enum containing the measurement types
+enum MeasurementType {
+
+  // MEASUREMENT_TYPE_UNSPECIFIED is used to indicate that
+  // MeasurementType field has not been set
+  MEASUREMENT_TYPE_UNSPECIFIED = 0;
+
+  // MEASUREMENT_TYPE_LOSS: loss measurement
+  MEASUREMENT_TYPE_LOSS = 1;
+
+  // MEASUREMENT_TYPE_DELAY: delay measurement
+  MEASUREMENT_TYPE_DELAY = 2;
+
+}
+
+// MeasurementDirection: an enum containing the measurement direction
+enum MeasurementDirection {
+
+  // MEASUREMENT_TYPE_UNSPECIFIED is used to indicate that
+  // MeasurementType field has not been set
+  MEASUREMENT_DIRECTION_UNSPECIFIED = 0;
+
+  // MEASUREMENT_DIRECTION_DIRECT: direct path
+  MEASUREMENT_DIRECTION_DIRECT = 1;
+
+  // MEASUREMENT_DIRECTION_RETURN: return path
+  MEASUREMENT_DIRECTION_RETURN = 2;
+
+  // MEASUREMENT_DIRECTION_BOTH: both direct and return paths
+  MEASUREMENT_DIRECTION_BOTH = 3;
+
+}
+
+message StampSessionResultNb {
+
+  uint32 id = 1;
+  double value = 2;
+  double timestamp = 3;
+
+}
+
+// ResetStampNodeRequest carries the arguments required to reset a STAMP node
+message ResetStampNodeRequest {
+
+  // node_id: Identifier of the STAMP node to initialize
+  string node_id = 1;
+
+}
+
+// ResetStampNodeReply carries the arguments returned by the
+// Reset RPC
+message ResetStampNodeReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+}
+
+// GetStampSessionsRequest carries the arguments required by the
+// GetStampSessions RPC
+message GetStampSessionsRequest {
+
+  // ssid: the STAMP Session Identifier of the STAMP Session to get
+  // If it is not set, all the STAMP sessions are returned
+  uint32 ssid = 1;
+
+}
+
+// GetStampSessionsReply carries the arguments required by the
+// GetStampSessions RPC
+message GetStampSessionsReply {
+
+  // status: status code of the operation
+  StatusCode status = 1;
+
+  // description: a description of the result of the operation
+  string description = 2;
+
+  // stamp_sessions: list of STAMP Sessions
+  repeated STAMPSession stamp_sessions = 3;
+
+}
+
+enum STAMPSessionStatus {
+  STAMP_SESSION_STATUS_UNSPECIFIED = 0;
+  STAMP_SESSION_STATUS_RUNNING = 1;
+  STAMP_SESSION_STATUS_STOPPED = 2;
+}
+
+message STAMPSession {
+
+  // ssid is the STAMP Session Identifier, defined in
+  // draft-ietf-ippm-stamp-srpm
+  uint32 ssid = 1;
+
+  // description is a human-friendly description of the STAMP Session
+  string description = 2;
+
+  STAMPSessionStatus status = 3;
+
+  string sender_id = 4;
+  string sender_name = 5;
+  string sender_source_ip = 6;
+
+  string reflector_id = 7;
+  string reflector_name = 8;
+  string reflector_source_ip = 9;
+
+  uint32 interval = 10;
+
+  // stamp_params carries the STAMP parameters
+  StampParameters stamp_params = 11;
+
+
+  // direct_sidlist is the segment list for the direct SRv6 path (i.e. the path
+  // Sender->Reflector)
+  SRv6Path direct_sidlist = 12;
+
+  // return_sidlist is the segment list for the direct SRv6 path (i.e. the path
+  // Reflector->Sender)
+  SRv6Path return_sidlist = 13;
+
+  double average_delay_direct_path = 14;
+  double average_delay_return_path = 15;
+
+
+}

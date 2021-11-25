@@ -27,12 +27,16 @@
 Implementation of a SDN Controller capable of controlling STAMP Sessions.
 """
 
+from concurrent import futures
+import argparse
 import logging
 import time
 
 import grpc
 
 import common_pb2
+import controller_pb2
+import controller_pb2_grpc
 
 from exceptions import (
     CreateSTAMPSessionError,
@@ -55,7 +59,7 @@ import stamp_reflector_pb2_grpc
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
 
-from utils import py_to_grpc
+from utils import grpc_to_py_resolve_defaults, py_to_grpc
 
 from libs.libstamp import (
     AuthenticationMode,
@@ -65,6 +69,10 @@ from libs.libstamp import (
     TimestampFormat
 )
 
+
+# Default command-line arguments
+DEFAULT_GRPC_IP = None
+DEFAULT_GRPC_PORT = 54321
 
 # Configure logging
 logging.basicConfig(
@@ -668,7 +676,7 @@ class STAMPSessionResults:
         self.count_packets += 1
         # Store the new delay, eventually
         if self.store_individual_delays:
-            self.delays.add(STAMPDelayResult(
+            self.delays.append(STAMPDelayResult(
                 id=self.last_result_id,
                 value=new_delay,
                 timestamp=time.time()
@@ -1066,8 +1074,6 @@ class Controller:
         ------
         NodeIdNotFoundError
             If `node_id` does not correspond to any existing node.
-        NotAStampReflectorError
-            If node identified by `node_id` is not a STAMP Reflector.
         InvalidStampNodeError
             If node is neither a STAMP Sender nor a STAMP Reflector.
         """
@@ -1569,16 +1575,16 @@ class Controller:
         # parameters
 
         sender_key_chain = sender_reply.stamp_params.key_chain
-        sender_timestamp_format = sender_reply.stamp_params.timestamp_format
-        packet_loss_type = sender_reply.stamp_params.packet_loss_type
+        sender_timestamp_format = grpc_to_py_resolve_defaults(TimestampFormat, sender_reply.stamp_params.timestamp_format)
+        packet_loss_type = grpc_to_py_resolve_defaults(PacketLossType, sender_reply.stamp_params.packet_loss_type)
         delay_measurement_mode = \
-            sender_reply.stamp_params.delay_measurement_mode
+            grpc_to_py_resolve_defaults(DelayMeasurementMode, sender_reply.stamp_params.delay_measurement_mode)
 
         reflector_key_chain = reflector_reply.stamp_params.key_chain
         reflector_timestamp_format = \
-            reflector_reply.stamp_params.timestamp_format
+            grpc_to_py_resolve_defaults(TimestampFormat, reflector_reply.stamp_params.timestamp_format)
         session_reflector_mode = \
-            reflector_reply.stamp_params.session_reflector_mode
+            grpc_to_py_resolve_defaults(SessionReflectorMode, reflector_reply.stamp_params.session_reflector_mode)
 
         # Sender and Reflector "reflector_udp_port" must be equal
         if sender_reply.stamp_params.reflector_udp_port != \
@@ -1594,10 +1600,10 @@ class Controller:
                          'must be equal')
             exit(-1)
 
-        auth_mode = sender_reply.stamp_params.auth_mode
+        auth_mode = grpc_to_py_resolve_defaults(AuthenticationMode, sender_reply.stamp_params.auth_mode)
 
         # Use SSID as STAMP Session description if description has been not set
-        description = description if description is not None else ssid
+        description = description if description is not None else str(ssid)
 
         # Create a STAMP Session object
         stamp_session = STAMPSession(
@@ -1674,6 +1680,7 @@ class Controller:
             raise StartSTAMPSessionError(reply.description)
 
         logger.debug('STAMP Session started successfully')
+        stamp_session.is_running = True
 
     def stop_stamp_session(self, ssid):
         """
@@ -1722,6 +1729,7 @@ class Controller:
             raise StopSTAMPSessionError(reply.description)
 
         logger.debug('STAMP Session stopped successfully')
+        stamp_session.is_running = False
 
     def destroy_stamp_session(self, ssid):
         """
@@ -1771,7 +1779,11 @@ class Controller:
             # Raise an exception
             raise DestroySTAMPSessionError(reply.description)
 
+        # Remove the STAMP Session from the STAMP Sessions dict
         del self.stamp_sessions[ssid]
+
+        # Mark the SSID as reusable
+        self.reusable_ssid.add(ssid)
 
         logger.debug('STAMP Session destroyed successfully')
 
@@ -1870,6 +1882,7 @@ class Controller:
         """
 
         # If SSID is provided return the corresponding STAMP Session
+        print('ssid\n\n\n\n', ssid)
         if ssid is not None:
             if ssid in self.stamp_sessions:
                 return [self.stamp_sessions[ssid]]
@@ -1878,7 +1891,7 @@ class Controller:
                 return []
 
         # No SSID provided, return all the STAMP Sessions
-        return self.stamp_sessions
+        return self.stamp_sessions.values()
 
     def get_stamp_results_average(self, ssid, fetch_results_from_stamp=False):
         """
@@ -1979,7 +1992,7 @@ class Controller:
 
         # Get results from the controller inventory
         mean_delay_direct_path, mean_delay_return_path = \
-            self.get_stamp_results(ssid, fetch_results_from_stamp)
+            self.get_stamp_results_average(ssid, fetch_results_from_stamp)
 
         # Print results
         print()
@@ -1991,3 +2004,626 @@ class Controller:
               .format(delay=mean_delay_return_path))
         print('*******************************************')
         print()
+
+
+class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
+    """
+    Provides methods that allow a controller to control the STAMP Sessions
+    through the gRPC protocol.
+    """
+
+    def __init__(self, controller):
+        # Initialize super class STAMPControllerService
+        super().__init__()
+        # Reference to the Controller to be controlled through the
+        # gRPC interface
+        self.controller = controller
+
+    def RegisterStampSender(self, request, context):
+        """RPC used to register a new STAMP Sender."""
+
+        logger.debug('RegisterStampSender RPC invoked. Request: %s', request)
+
+        # Extract the node id from the request message
+        node_id = request.node_id
+
+        # Extract gRPC IP address from the request message
+        grpc_ip = request.grpc_ip
+
+        # Extract gRPC port from the request message
+        grpc_port = request.grpc_port
+
+        # Extract IP address from the request message
+        ip = request.ip
+
+        # Extract STAMP UDP port from the request message
+        # This parameter is optional, therefore we set it to None if it is
+        # not provided
+        udp_port = None
+        if request.udp_port:
+            udp_port = request.udp_port
+
+        # Extract the intrfaces from the request message
+        # This parameter is optional, therefore we set it to None if it is
+        # not provided
+        interfaces = None
+        if request.interfaces:
+            interfaces = list(request.interfaces)
+
+        # Extract STAMP Source IPv6 address from the request message
+        # This parameter is optional, therefore we set it to None if it is
+        # not provided
+        stamp_source_ipv6_address = None
+        if request.stamp_source_ipv6_address:
+            stamp_source_ipv6_address = request.stamp_source_ipv6_address
+
+        # Extract "initialize" parameter. If "initialize" is set, we need to
+        # initialize the node after its registration.
+        initialize = request.initialize
+
+        # Try to register the STAMP Session Sender
+        try:
+            self.controller.add_stamp_sender(
+                node_id, grpc_ip, grpc_port, ip, udp_port, interfaces,
+                stamp_source_ipv6_address, initialize
+            )
+        except NodeIdAlreadyExistsError:
+            # The node is already registered, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Sender node has been already registered')
+            return controller_pb2.RegisterStampSenderReply(
+                status=common_pb2.StatusCode.STATUS_CODE_ALREADY_REGISTERED,
+                description='Sender node has been already registered')
+
+        # Return with success status code
+        logger.debug('RegisterStampSender RPC completed')
+        return controller_pb2.RegisterStampSenderReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
+
+    def RegisterStampReflector(self, request, context):
+        """RPC used to register a new STAMP Reflector."""
+
+        logger.debug('RegisterStampReflector RPC invoked. Request: %s', request)
+
+        # Extract the node id from the request message
+        node_id = request.node_id
+
+        # Extract gRPC IP address from the request message
+        grpc_ip = request.grpc_ip
+
+        # Extract gRPC port from the request message
+        grpc_port = request.grpc_port
+
+        # Extract IP address from the request message
+        ip = request.ip
+
+        # Extract STAMP UDP port from the request message
+        udp_port = request.udp_port
+
+        # Extract the intrfaces from the request message
+        # This parameter is optional, therefore we set it to None if it is
+        # not provided
+        interfaces = None
+        if request.interfaces:
+            interfaces = list(request.interfaces)
+
+        # Extract STAMP Source IPv6 address from the request message
+        # This parameter is optional, therefore we set it to None if it is
+        # not provided
+        stamp_source_ipv6_address = None
+        if request.stamp_source_ipv6_address:
+            stamp_source_ipv6_address = request.stamp_source_ipv6_address
+
+        # Extract "initialize" parameter. If "initialize" is set, we need to
+        # initialize the node after its registration.
+        initialize = request.initialize
+
+        # Try to register the STAMP Session Reflector
+        try:
+            self.controller.add_stamp_reflector(
+                node_id, grpc_ip, grpc_port, ip, udp_port, interfaces,
+                stamp_source_ipv6_address, initialize
+            )
+        except NodeIdAlreadyExistsError:
+            # The node is already registered, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Reflector node has been already registered')
+            return controller_pb2.RegisterStampReflectorReply(
+                status=common_pb2.StatusCode.STATUS_CODE_ALREADY_REGISTERED,
+                description='Reflector node has been already registered')
+
+        # Return with success status code
+        logger.debug('RegisterStampReflector RPC completed')
+        return controller_pb2.RegisterStampReflectorReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
+
+    def UnregisterStampNode(self, request, context):
+        """RPC used to unregister a STAMP node."""
+
+        logger.debug('UnregisterStampNode RPC invoked. Request: %s', request)
+
+        raise NotImplementedError
+
+    def InitStampNode(self, request, context):
+        """RPC used to initialize the STAMP nodes."""
+
+        logger.debug('InitStampNode RPC invoked. Request: %s', request)
+
+        # Try to initialize the STAMP node
+        try:
+            self.controller.init_stamp_node(node_id=request.node_id)
+        except NodeIdNotFoundError:
+            # No STAMP node corresponding to the node ID, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'No STAMP node corresponding to the node ID')
+            return controller_pb2.InitStampNodeReply(
+                status=common_pb2.StatusCode.STATUS_CODE_NODE_NOT_FOUND,
+                description='No STAMP node corresponding to the node ID')
+        except InvalidStampNodeError:
+            # The provided UDP port is not valid, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Invalid STAMP node')
+            return controller_pb2.InitStampNodeReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
+                description='Invalid STAMP node')
+
+        # Return with success status code
+        logger.debug('InitStampNode RPC completed')
+        return controller_pb2.InitStampNodeReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
+
+    def ResetStampNode(self, request, context):
+        """RPC used to reset the STAMP nodes."""
+
+        logger.debug('ResetStampNode RPC invoked. Request: %s', request)
+        logger.info('Attempting to reset STAMP node')
+
+        # Reset the STAMP node
+        try:
+            self.controller.reset_stamp_node(node_id=request.node_id)
+        except NodeIdNotFoundError:
+            # No STAMP node corresponding to the node ID, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'No STAMP node corresponding to the node ID')
+            return controller_pb2.InitStampNodeReply(
+                status=common_pb2.StatusCode.STATUS_CODE_NODE_NOT_FOUND,
+                description='No STAMP node corresponding to the node ID')
+        except InvalidStampNodeError:
+            # The provided UDP port is not valid, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Invalid STAMP node')
+            return controller_pb2.InitStampNodeReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
+                description='Invalid STAMP node')
+
+        # Return with success status code
+        logger.debug('ResetStampNode RPC completed')
+        return controller_pb2.ResetStampNodeReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
+
+    def CreateStampSession(self, request, context):
+        """RPC used to create a new STAMP Session."""
+
+        logger.debug('CreateStampSession RPC invoked. Request: %s', request)
+
+        # Extract parameters from the gRPC request
+        description = None
+        if request.description:
+            description = request.description
+
+        sender_id = request.sender_id
+
+        reflector_id = None
+        if request.reflector_id:
+            reflector_id = request.reflector_id
+
+        direct_sidlist = None
+        if request.direct_sidlist:
+            direct_sidlist = list(request.direct_sidlist.segments)
+
+        return_sidlist = None
+        if request.return_sidlist:
+            return_sidlist = list(request.return_sidlist.segments)
+
+        interval = None
+        if request.interval:
+            interval = request.interval
+
+        duration = None
+        if request.duration:
+            duration = request.duration
+
+        auth_mode = None
+        if request.stamp_params.auth_mode:
+            auth_mode = request.stamp_params.auth_mode
+
+        key_chain = None
+        if request.stamp_params.key_chain:
+            key_chain = request.stamp_params.key_chain
+
+        timestamp_format = None
+        if request.stamp_params.timestamp_format:
+            timestamp_format = request.stamp_params.timestamp_format
+
+        packet_loss_type = None
+        if request.stamp_params.packet_loss_type:
+            packet_loss_type = request.stamp_params.packet_loss_type
+
+        delay_measurement_mode = None
+        if request.stamp_params.delay_measurement_mode:
+            delay_measurement_mode = request.stamp_params.delay_measurement_mode
+
+        session_reflector_mode = None
+        if request.stamp_params.session_reflector_mode:
+            session_reflector_mode = request.stamp_params.session_reflector_mode
+
+        sender_source_ip = None
+        if request.sender_source_ipv6_address:
+            sender_source_ip = request.sender_source_ipv6_address
+
+        reflector_source_ip = None
+        if request.reflector_source_ipv6_address:
+            reflector_source_ip = request.reflector_source_ipv6_address
+
+        # Try to create a STAMP Session
+        try:
+            ssid = self.controller.create_stamp_session(
+                sender_id=sender_id, reflector_id=reflector_id,
+                sidlist=direct_sidlist, return_sidlist=return_sidlist,
+                interval=interval, auth_mode=auth_mode, key_chain=key_chain,
+                timestamp_format=timestamp_format,
+                packet_loss_type=packet_loss_type,
+                delay_measurement_mode=delay_measurement_mode,
+                session_reflector_mode=session_reflector_mode,
+                store_individual_delays=True,
+                sender_source_ip=sender_source_ip,
+                reflector_source_ip=reflector_source_ip, description=description
+            )
+        except CreateSTAMPSessionError as err:
+            # Failed to create a STAMP Session, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Cannot create STAMP Session: %s', err.msg)
+            # Return an error
+            return controller_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
+                description='Cannot create STAMP Session: {err}'
+                            .format(err=err.msg))
+        except NodeIdNotFoundError:
+            # No STAMP node corresponding to the node ID, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'No STAMP node corresponding to the node ID')
+            return controller_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_NODE_NOT_FOUND,
+                description='No STAMP node corresponding to the node ID')
+        except NotAStampSenderError:
+            # The node specified as STAMP sender is not a sender, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Node is not a STAMP Sender: %s', sender_id)
+            return controller_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
+                description='Node is not a STAMP Sender: {sender_id}'
+                            .format(sender_id=sender_id))
+        except NodeNotInitializedError:
+            # The STAMP node is not initialized, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'STAMP Node is not initialized')
+            return controller_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
+                description='STAMP node is not initialized')
+        except NotAStampReflectorError:
+            # The node specified as STAMP reflector is not a reflector, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Node is not a STAMP Reflector: %s', reflector_id)
+            return controller_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
+                description='Node is not a STAMP Reflector: {reflector_id}')
+
+        # Return with success status code
+        logger.debug('CreateStampSession RPC completed')
+        return controller_pb2.CreateStampSessionReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS, ssid=ssid)
+
+    def StartStampSession(self, request, context):
+        """RPC used to start a STAMP Session."""
+
+        logger.debug('StartStampSession RPC invoked. Request: %s', request)
+
+        # Try to start the STAMP Session
+        try:
+            self.controller.start_stamp_session(ssid=request.ssid)
+        except StartSTAMPSessionError as err:
+            # Failed to start the STAMP Session, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Cannot start the STAMP Session: %s', err.msg)
+            # Return an error
+            return controller_pb2.StartStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
+                description='Cannot start the STAMP Session: {err}'
+                            .format(err=err.msg))
+        except STAMPSessionNotFoundError:
+            # STAMP Session not found, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'STAMP Session not found, ssid %s', request.ssid)
+            # Return an error
+            return controller_pb2.StartStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
+                description='STAMP Session not found, ssid {ssid}'
+                            .format(ssid=request.ssid))
+
+        # Return with success status code
+        logger.debug('StartStampSessionReply RPC completed')
+        return controller_pb2.StartStampSessionReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
+
+    def StopStampSession(self, request, context):
+        """RPC used to stop a running STAMP Session."""
+
+        logger.debug('StopStampSession RPC invoked. Request: %s', request)
+
+        # Try to stop the STAMP Session
+        try:
+            self.controller.stop_stamp_session(ssid=request.ssid)
+        except StopSTAMPSessionError as err:
+            # Failed to stop the STAMP Session, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Cannot stop the STAMP Session: %s', err.msg)
+            # Return an error
+            return controller_pb2.StopStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
+                description='Cannot stop the STAMP Session: {err}'
+                            .format(err=err.msg))
+        except STAMPSessionNotFoundError:
+            # STAMP Session not found, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'STAMP Session not found, ssid %s', request.ssid)
+            # Return an error
+            return controller_pb2.StopStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
+                description='STAMP Session not found, ssid {ssid}'
+                            .format(ssid=request.ssid))
+
+        # Return with success status code
+        logger.debug('StopStampSessionReply RPC completed')
+        return controller_pb2.StopStampSessionReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
+
+    def DestroyStampSession(self, request, context):
+        """RPC used to destroy an existing STAMP Session."""
+
+        logger.debug('DestroyStampSession RPC invoked. Request: %s', request)
+
+        # Try to destroy the STAMP Session
+        try:
+            self.controller.destroy_stamp_session(ssid=request.ssid)
+        except DestroySTAMPSessionError as err:
+            # Failed to destroy the STAMP Session, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Cannot destroy the STAMP Session: %s', err.msg)
+            # Return an error
+            return controller_pb2.StopStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
+                description='Cannot destroy the STAMP Session: {err}'
+                            .format(err=err.msg))
+        except STAMPSessionNotFoundError:
+            # STAMP Session not found, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'STAMP Session not found, ssid %s', request.ssid)
+            # Return an error
+            return controller_pb2.StopStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
+                description='STAMP Session not found, ssid {ssid}'
+                            .format(ssid=request.ssid))
+
+        # Return with success status code
+        logger.debug('DestroyStampSession RPC completed')
+        return controller_pb2.DestroyStampSessionReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
+
+    def GetStampResults(self, request, context):
+        """RPC used to collect the results of STAMP Session."""
+
+        logger.debug('GetStampResults RPC invoked. Request: %s', request)
+
+        # Try to collect the results of the STAMP Session
+        try:
+            direct_path_results, return_path_results = \
+                self.controller.get_stamp_results(
+                    ssid=request.ssid,
+                    fetch_results_from_stamp=True
+            )
+        except STAMPSessionNotFoundError:
+            # The STAMP Session does not exist
+            logging.error('SSID %d not found', request.ssid)
+            return stamp_sender_pb2.StampResults(
+                status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
+                description='SSID {ssid} not found'.format(ssid=request.ssid))
+
+        # Retrieve STAMP Session
+        try:
+            stamp_session = \
+                self.controller.get_measurement_sessions(
+                    ssid=request.ssid)[0]
+        except STAMPSessionNotFoundError:
+            # The STAMP Session does not exist
+            logging.error('SSID %d not found', request.ssid)
+            return stamp_sender_pb2.StampResults(
+                status=common_pb2.StatusCode.STATUS_CODE_SESSION_NOT_FOUND,
+                description='SSID {ssid} not found'.format(ssid=request.ssid))
+
+        # Prepare the gRPC reply
+        reply = controller_pb2.GetStampResultsReply()
+
+        # Populate the gRPC reply with the test results
+        res = reply.results.add()
+        res.ssid = request.ssid
+        res.direct_sidlist.segments.extend(stamp_session.sidlist)
+        res.return_sidlist.segments.extend(stamp_session.return_sidlist)
+        res.measurement_type = controller_pb2.MeasurementType.MEASUREMENT_TYPE_DELAY
+        res.measurement_direction = controller_pb2.MeasurementDirection.MEASUREMENT_DIRECTION_BOTH
+        res.direct_path_average_delay = direct_path_results.mean_delay
+        res.return_path_average_delay = return_path_results.mean_delay
+        for delay in direct_path_results.delays:
+            direct_path_res = res.direct_path_results.add()
+            direct_path_res.id = delay.id
+            direct_path_res.value = delay.value
+            direct_path_res.timestamp = delay.timestamp
+        for delay in return_path_results.delays:
+            return_path_res = res.return_path_results.add()
+            return_path_res.id = delay.id
+            return_path_res.value = delay.value
+            return_path_res.timestamp = delay.timestamp
+
+        # Set status code and return
+        logger.debug('GetStampResults RPC completed')
+        reply.status = common_pb2.StatusCode.STATUS_CODE_SUCCESS
+        return reply
+
+    def GetStampSessions(self, request, context):
+        """RPC used to collect the STAMP measurement sessions."""
+
+        logger.debug('GetStampSessions RPC invoked. Request: %s', request)
+
+        # Extract SSID from the gRPC request; SSID is optional
+        # If not set, we return all the STAMP Sessions
+        ssid = None
+        if request.ssid:
+            ssid = request.ssid
+
+        # Try to collect the results of the STAMP Session
+        stamp_sessions = self.controller.get_measurement_sessions(ssid=ssid)
+
+        # Prepare the gRPC reply
+        reply = controller_pb2.GetStampSessionsReply()
+
+        # Populate the gRPC reply with the test results
+        for stamp_session in stamp_sessions:
+            sess = reply.stamp_sessions.add()
+            sess.ssid = stamp_session.ssid
+            sess.description = stamp_session.description
+            if stamp_session.is_running:
+                sess.status = controller_pb2.STAMP_SESSION_STATUS_RUNNING
+            else:
+                sess.status = controller_pb2.STAMP_SESSION_STATUS_STOPPED
+            sess.sender_id = stamp_session.sender.node_id
+            sess.sender_name = stamp_session.sender.node_name
+            if stamp_session.sender.stamp_source_ipv6_address is not None:
+                sess.sender_source_ip = stamp_session.sender.stamp_source_ipv6_address
+            sess.reflector_id = stamp_session.reflector.node_id
+            sess.reflector_name = stamp_session.reflector.node_name
+            if stamp_session.reflector.stamp_source_ipv6_address is not None:
+                sess.reflector_source_ip = stamp_session.reflector.stamp_source_ipv6_address
+            sess.interval = stamp_session.interval
+            sess.stamp_params.auth_mode = stamp_session.auth_mode
+            sess.stamp_params.key_chain = stamp_session.sender_key_chain
+            sess.stamp_params.timestamp_format = stamp_session.sender_timestamp_format
+            sess.stamp_params.packet_loss_type = stamp_session.packet_loss_type
+            sess.stamp_params.delay_measurement_mode = stamp_session.delay_measurement_mode
+            sess.stamp_params.session_reflector_mode = stamp_session.session_reflector_mode
+            sess.direct_sidlist.segments.extend(stamp_session.sidlist)
+            sess.return_sidlist.segments.extend(stamp_session.return_sidlist)
+            sess.average_delay_direct_path = stamp_session.stamp_session_direct_path_results.mean_delay
+            sess.average_delay_return_path = stamp_session.stamp_session_return_path_results.mean_delay
+
+        # Set status code and return
+        logger.debug('GetStampSessions RPC completed')
+        reply.status = common_pb2.StatusCode.STATUS_CODE_SUCCESS
+        return reply
+
+
+def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
+                    secure_mode=False):
+    """
+    Run a gRPC server that will accept RPCs on the provided IP address and
+     port and block until the server is terminated.
+
+    Parameters
+    ----------
+    grpc_ip : str, optional
+        IP address on which the gRPC server will accept connections. None
+         means "any" (default is None)
+    grpc_port : int, optional
+        Port on which the gRPC server will accept connections
+         (default is 12345).
+    secure_mode : bool, optional
+        Whether to enable or not gRPC secure mode (default is False).
+
+    Returns
+    -------
+    None
+    """
+
+    # Create a Controller object
+    controller = Controller()
+
+    # Create the gRPC server
+    logger.debug('Creating the gRPC server')
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    controller_pb2_grpc.add_STAMPControllerServiceServicer_to_server(
+        STAMPControllerServicer(controller), server)
+
+    # Add secure or insecure port, depending on the "secure_mode" chosen
+    if secure_mode:
+        logging.fatal('Secure mode not yet implemented')
+        exit(1)
+    else:
+        # If gRPC IP address is not provided, listen on any IP address
+        if grpc_ip is None:
+            # Listen on any IPv4 address
+            server.add_insecure_port('0.0.0.0:{port}'.format(port=grpc_port))
+            # Listen on any IPv6 address
+            server.add_insecure_port('[::]:{port}'.format(port=grpc_port))
+        else:
+            server.add_insecure_port('{address}:{port}'.format(
+                address=grpc_ip, port=grpc_port))
+
+    # Start the server and block until it is terminated
+    logger.info('Listening gRPC, port %d', grpc_port)
+    server.start()
+    server.wait_for_termination()
+
+
+def parse_arguments():
+    """
+    This function parses the command-line arguments.
+
+    Returns
+    -------
+    None.
+    """
+
+    parser = argparse.ArgumentParser(
+        description='SDN Controller implementation.')
+    parser.add_argument('--grpc-ip', dest='grpc_ip', type=str,
+                        help='ip address on which the gRPC server will accept '
+                             'RPCs. None means "any" (default: None)')
+    parser.add_argument('--grpc-port', dest='grpc_port', type=int,
+                        default=DEFAULT_GRPC_PORT,
+                        help='port on which the gRPC server will accept RPCs '
+                             '(default: 12345)')
+    parser.add_argument('-d', '--debug', dest='debug', action='store_true',
+                        default=False, help='Debug mode (default: False')
+    args = parser.parse_args()
+
+    return args
+
+
+if __name__ == '__main__':
+
+    # Parse and extract command-line arguments
+    logger.debug('Parsing arguments')
+    args = parse_arguments()
+    grpc_ip = args.grpc_ip
+    grpc_port = args.grpc_port
+    debug = args.debug
+
+    # Configure logging
+    if debug:
+        logger.setLevel(level=logging.DEBUG)
+        logger.info('Logging level: DEBUG')
+    else:
+        logger.setLevel(level=logging.INFO)
+        logger.info('Logging level: INFO')
+
+    # Run the gRPC server and block forever
+    logger.debug('Starting gRPC server')
+    run_grpc_server(grpc_ip, grpc_port)
