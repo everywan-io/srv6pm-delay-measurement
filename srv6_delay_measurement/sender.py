@@ -638,22 +638,11 @@ class STAMPSessionSender:
             timestamp_format=timestamp_format,
             packet_loss_type=packet_loss_type,
             delay_measurement_mode=delay_measurement_mode,
+            interval=interval,
             stop_flag=Event(),  # To support stopping the sending thread
             stamp_source_ipv6_address=stamp_source_ipv6_address
         )
         logger.info('STAMP Session initialized: SSID %d', ssid)
-
-        # Create a new thread to handle the asynchronous periodic sending of
-        # STAMP Test packets; the new thread is not started here, it is
-        # started by the StartStampSession RPC
-        logger.info('Creating sending thread')
-        stamp_session.sending_thread = Thread(
-            target=self.send_stamp_packet_periodic,
-            kwargs={
-                'ssid': ssid,
-                'interval': interval
-            }
-        )
 
         # Add the STAMP session to the STAMP sessions dict
         self.stamp_sessions[ssid] = stamp_session
@@ -711,8 +700,20 @@ class STAMPSessionSender:
                           'already running', ssid)
             raise STAMPSessionNotRunningError(ssid=ssid)
 
+        # Create a new thread to handle the asynchronous periodic sending of
+        # STAMP Test packets
+        logger.info('Creating sending thread')
+        session.sending_thread = Thread(
+            target=self.send_stamp_packet_periodic,
+            kwargs={
+                'ssid': ssid,
+                'interval': session.interval
+            }
+        )
+
         # Start the sending thread
         logger.info('Starting sending thread')
+        session.stop_flag.clear()
         session.sending_thread.start()
 
         # Set the flag "started"
