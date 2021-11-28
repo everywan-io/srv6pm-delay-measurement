@@ -1548,16 +1548,21 @@ class Controller:
         # parameters
 
         sender_key_chain = sender_reply.stamp_params.key_chain
-        sender_timestamp_format = grpc_to_py_resolve_defaults(TimestampFormat, sender_reply.stamp_params.timestamp_format)
-        packet_loss_type = grpc_to_py_resolve_defaults(PacketLossType, sender_reply.stamp_params.packet_loss_type)
+        sender_timestamp_format = grpc_to_py_resolve_defaults(
+            TimestampFormat, sender_reply.stamp_params.timestamp_format)
+        packet_loss_type = grpc_to_py_resolve_defaults(
+            PacketLossType, sender_reply.stamp_params.packet_loss_type)
         delay_measurement_mode = \
-            grpc_to_py_resolve_defaults(DelayMeasurementMode, sender_reply.stamp_params.delay_measurement_mode)
+            grpc_to_py_resolve_defaults(
+                DelayMeasurementMode, sender_reply.stamp_params.delay_measurement_mode)
 
         reflector_key_chain = reflector_reply.stamp_params.key_chain
         reflector_timestamp_format = \
-            grpc_to_py_resolve_defaults(TimestampFormat, reflector_reply.stamp_params.timestamp_format)
+            grpc_to_py_resolve_defaults(
+                TimestampFormat, reflector_reply.stamp_params.timestamp_format)
         session_reflector_mode = \
-            grpc_to_py_resolve_defaults(SessionReflectorMode, reflector_reply.stamp_params.session_reflector_mode)
+            grpc_to_py_resolve_defaults(
+                SessionReflectorMode, reflector_reply.stamp_params.session_reflector_mode)
 
         # Sender and Reflector "reflector_udp_port" must be equal
         if sender_reply.stamp_params.reflector_udp_port != \
@@ -1573,7 +1578,8 @@ class Controller:
                          'must be equal')
             exit(-1)
 
-        auth_mode = grpc_to_py_resolve_defaults(AuthenticationMode, sender_reply.stamp_params.auth_mode)
+        auth_mode = grpc_to_py_resolve_defaults(
+            AuthenticationMode, sender_reply.stamp_params.auth_mode)
 
         # Use SSID as STAMP Session description if description has been not set
         description = description if description is not None else str(ssid)
@@ -1761,7 +1767,7 @@ class Controller:
 
         # Mark the SSID as reusable
         self.reusable_ssid.add(ssid)
-        
+
         # Decrease sessions counter on the Sender and Reflector
         stamp_session.sender.sessions_count -= 1
         stamp_session.reflector.sessions_count -= 1
@@ -2064,7 +2070,8 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
     def RegisterStampReflector(self, request, context):
         """RPC used to register a new STAMP Reflector."""
 
-        logger.debug('RegisterStampReflector RPC invoked. Request: %s', request)
+        logger.debug(
+            'RegisterStampReflector RPC invoked. Request: %s', request)
 
         # Extract the node id from the request message
         node_id = request.node_id
@@ -2433,8 +2440,7 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
             direct_path_results, return_path_results = \
                 self.controller.get_stamp_results(
                     ssid=request.ssid,
-                    fetch_results_from_stamp=True
-            )
+                    fetch_results_from_stamp=True)
         except STAMPSessionNotFoundError:
             # The STAMP Session does not exist
             logging.error('SSID %d not found', request.ssid)
