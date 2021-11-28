@@ -100,6 +100,12 @@ class STAMPNode:
         The gRPC port address of the STAMP node.
     ip : str
         The IP address of the STAMP node.
+    sender_udp_port : int
+        UDP port used by STAMP Sender. If it is None, the Sender port will be chosen
+         randomly.
+    reflector_udp_port : int
+        UDP port used by STAMP Reflector. If it is None, the Sender port will be chosen
+         randomly.
     node_name : str
         A human-friendly name for the STAMP node.
     interfaces : list, optional
@@ -122,8 +128,10 @@ class STAMPNode:
     -------
     """
 
-    def __init__(self, node_id, grpc_ip, grpc_port, ip, node_name=None,
-                 interfaces=None, stamp_source_ipv6_address=None):
+    def __init__(self, node_id, grpc_ip, grpc_port, ip, sender_udp_port=None,
+                 reflector_udp_port=None, node_name=None,
+                 interfaces=None, stamp_source_ipv6_address=None,
+                 is_sender=False, is_reflector=False):
         """
         A class to represent a STAMP node.
 
@@ -137,6 +145,12 @@ class STAMPNode:
             The gRPC port address of the STAMP node.
         ip : str
             The IP address of the STAMP node.
+        sender_udp_port : int, optional
+            UDP port used by STAMP Sender. If it is None, the Sender port will be chosen
+            randomly.
+        reflector_udp_port : int, optional
+            UDP port used by STAMP Reflector. If it is None, the Reflector port will be chosen
+            randomly.
         node_name : str, optional
             A human-friendly name for the STAMP node. If this parameter is
             None, the node identifier (node_id) is used as node name
@@ -168,168 +182,20 @@ class STAMPNode:
         self.grpc_stub = None
         # Flag indicating whether the node has been initialized or not
         self.is_initialized = False
+        # Set the UDP port of the Sender
+        self.sender_udp_port = sender_udp_port
+        # Set the UDP port of the Reflector
+        self.reflector_udp_port = reflector_udp_port
+        # Is Sender?
+        self.is_sender = is_sender
+        # Is Reflector?
+        self.is_reflector = is_reflector
 
     def is_stamp_sender(self):
-        return isinstance(self, STAMPSender)
+        return self.is_sender
 
     def is_stamp_reflector(self):
-        return isinstance(self, STAMPReflector)
-
-
-class STAMPSender(STAMPNode):
-    """
-    A class to represent a STAMP Sender.
-
-    ...
-
-    Attributes
-    ----------
-    node_id : str
-        The identifier of the STAMP node.
-    grpc_ip : str
-        The gRPC IP address of the STAMP node.
-    grpc_port : int
-        The gRPC port address of the STAMP node.
-    ip : str
-        The IP address of the STAMP node.
-    udp_port : int
-        UDP port used by STAMP. If it is None, the Sender port will be chosen
-         randomly.
-    node_name : str
-        A human-friendly name for the STAMP node.
-    interfaces : list
-        The list of the interfaces on which the STAMP node will listen for
-         STAMP packets. If this parameter is None, the node will listen on all
-         the interfaces.
-    stamp_source_ipv6_address : str
-        The IPv6 address to be used as source IPv6 address of the STAMP
-            packets. This can be overridden by providing a IPv6 address to the
-            create_stamp_session method. If None, the Sender/Reflector will
-            use the loopback IPv6 address as STAMP Source Address.
-
-    Methods
-    -------
-    """
-
-    def __init__(self, node_id, grpc_ip, grpc_port, ip, udp_port=None,
-                 node_name=None, interfaces=None,
-                 stamp_source_ipv6_address=None):
-        """
-        A class to represent a STAMP Sender.
-
-        Parameters
-        ----------
-        node_id : str
-            The identifier of the STAMP node.
-        grpc_ip : str
-            The gRPC IP address of the STAMP node.
-        grpc_port : int
-            The gRPC port address of the STAMP node.
-        ip : str
-            The IP address of the STAMP node.
-        udp_port : int, optional
-            UDP port used by STAMP. If it is None, the Sender port will be
-             chosen randomly (default None).
-        node_name : str, optional
-            A human-friendly name for the STAMP node. If this parameter is
-            None, the node identifier (node_id) is used as node name
-            (default: None).
-        interfaces : list, optional
-            The list of the interfaces on which the STAMP node will listen for
-             STAMP packets. If this parameter is None, the node will listen on
-             all the interfaces (default is None).
-        stamp_source_ipv6_address : str, optional
-            The IPv6 address to be used as source IPv6 address of the STAMP
-             packets. This can be overridden by providing a IPv6 address to the
-             create_stamp_session method. If None, the Sender/Reflector will
-             use the loopback IPv6 address as STAMP Source Address
-             (default: None).
-        """
-
-        # Set parameters for a generic STAMP node
-        super().__init__(node_id=node_id, grpc_ip=grpc_ip,
-                         grpc_port=grpc_port, ip=ip, node_name=node_name,
-                         interfaces=interfaces,
-                         stamp_source_ipv6_address=stamp_source_ipv6_address)
-        # Set the UDP port of the Sender
-        self.udp_port = udp_port
-
-
-class STAMPReflector(STAMPNode):
-    """
-    A class to represent a STAMP Reflector.
-
-    ...
-
-    Attributes
-    ----------
-    node_id : str
-        The identifier of the STAMP node.
-    grpc_ip : str
-        The gRPC IP address of the STAMP node.
-    grpc_port : int
-        The gRPC port address of the STAMP node.
-    ip : str
-        The IP address of the STAMP node.
-    udp_port : int
-        UDP port used by STAMP.
-    node_name : str
-        A human-friendly name for the STAMP node.
-    interfaces : list
-        The list of the interfaces on which the STAMP node will listen for
-         STAMP packets. If this parameter is None, the node will listen on all
-         the interfaces.
-    stamp_source_ipv6_address : str
-        The IPv6 address to be used as source IPv6 address of the STAMP
-            packets. This can be overridden by providing a IPv6 address to the
-            create_stamp_session method. If None, the Sender/Reflector will
-            use the loopback IPv6 address as STAMP Source Address.
-
-    Methods
-    -------
-    """
-
-    def __init__(self, node_id, grpc_ip, grpc_port, ip, udp_port,
-                 node_name=None, interfaces=None,
-                 stamp_source_ipv6_address=None):
-        """
-        Constructs all the necessary attributes for the STAMP Reflector object.
-
-        Parameters
-        ----------
-        node_id : str
-            The identifier of the STAMP node.
-        grpc_ip : str
-            The gRPC IP address of the STAMP node.
-        grpc_port : int
-            The gRPC port address of the STAMP node.
-        ip : str
-            The IP address of the STAMP node.
-        udp_port : int
-            UDP port used by STAMP.
-        node_name : str, optional
-            A human-friendly name for the STAMP node. If this parameter is
-            None, the node identifier (node_id) is used as node name
-            (default: None).
-        interfaces : list, optional
-            The list of the interfaces on which the STAMP node will listen for
-             STAMP packets. If this parameter is None, the node will listen on
-             all the interfaces (default is None).
-        stamp_source_ipv6_address : str, optional
-            The IPv6 address to be used as source IPv6 address of the STAMP
-             packets. This can be overridden by providing a IPv6 address to the
-             create_stamp_session method. If None, the Sender/Reflector will
-             use the loopback IPv6 address as STAMP Source Address
-             (default: None).
-        """
-
-        # Set parameters for a generic STAMP node
-        super().__init__(node_id=node_id, grpc_ip=grpc_ip,
-                         grpc_port=grpc_port, ip=ip, node_name=node_name,
-                         interfaces=interfaces,
-                         stamp_source_ipv6_address=stamp_source_ipv6_address)
-        # Set the UDP port of the Reflector
-        self.udp_port = udp_port
+        return self.is_reflector
 
 
 class STAMPSession:
@@ -344,9 +210,9 @@ class STAMPSession:
         16-bit Segment Session Identifier (SSID) of the STAMP Session.
     description : str
         A string which describes the STAMP Session.
-    sender : controller.STAMPSender
+    sender : controller.STAMPNode
         An object representing the STAMP Session Sender.
-    reflector : controller.STAMPReflector
+    reflector : controller.STAMPNode
         An object representing the STAMP Session Reflector.
     sidlist : list
         Segment List for the direct path (Sender to Reflector).
@@ -400,9 +266,9 @@ class STAMPSession:
             16-bit Segment Session Identifier (SSID) of the STAMP Session.
         description : str
             A string which describes the STAMP Session.
-        sender : controller.STAMPSender
+        sender : controller.STAMPNode
             An object representing the STAMP Session Sender.
-        reflector : controller.STAMPReflector
+        reflector : controller.STAMPNode
             An object representing the STAMP Session Reflector.
         sidlist : list
             Segment List for the direct path (Sender to Reflector).
@@ -845,20 +711,18 @@ class Controller:
                      grpc_port, ip, udp_port, interfaces,
                      stamp_source_ipv6_address)
 
-        # Check if node_id is already taken
-        if self.stamp_nodes.get(node_id, None) is not None:
-            raise NodeIdAlreadyExistsError
-
-        # Create a STAMP Sender object and store it
-        node = STAMPSender(
-            node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
-            udp_port=udp_port, interfaces=interfaces,
-            stamp_source_ipv6_address=stamp_source_ipv6_address)
-        self.stamp_nodes[node_id] = node
-
-        # Initialize the node, eventually
-        if initialize:
-            self.init_sender(node_id)
+        return self.add_stamp_node(
+            node_id=node_id,
+            grpc_ip=grpc_ip,
+            grpc_port=grpc_port,
+            ip=ip,
+            interfaces=interfaces,
+            stamp_source_ipv6_address=stamp_source_ipv6_address,
+            initialize=initialize,
+            is_sender=True,
+            is_reflector=False,
+            sender_port=udp_port
+        )
 
     def add_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip, udp_port,
                             interfaces=None, stamp_source_ipv6_address=None,
@@ -896,20 +760,90 @@ class Controller:
                      grpc_port, ip, udp_port, interfaces,
                      stamp_source_ipv6_address)
 
+        return self.add_stamp_node(
+            node_id=node_id,
+            grpc_ip=grpc_ip,
+            grpc_port=grpc_port,
+            ip=ip,
+            interfaces=interfaces,
+            stamp_source_ipv6_address=stamp_source_ipv6_address,
+            initialize=initialize,
+            is_sender=False,
+            is_reflector=True,
+            reflector_port=udp_port
+        )
+
+    def add_stamp_node(self, node_id, grpc_ip, grpc_port, ip,
+                       interfaces=None, stamp_source_ipv6_address=None,
+                       initialize=True, is_sender=False, is_reflector=False,
+                       sender_port=None, reflector_port=None):
+        """
+        Add a STAMP Node to the Controller inventory.
+
+        node_id : str
+            An identifier to identify the STAMP Node
+        interfaces : list, optional
+            The list of the interfaces on which the STAMP node will listen for
+             STAMP packets. If this parameter is None, the node will listen on
+             all the interfaces (default is None).
+        stamp_source_ipv6_address : str, optional
+            The IPv6 address to be used as source IPv6 address of the STAMP
+             packets. This can be overridden by providing a IPv6 address to the
+             create_stamp_session method. If None, the STAMP node will
+             use the loopback IPv6 address as STAMP Source Address
+             (default: None).
+        initialize : bool, optional
+            Whether to automatically initialize the STAMP Node or not.
+        is_sender : bool, optional
+            True if the STAMP Node is a Sender (default: False).
+        is_reflector : bool, optional
+            True if the STAMP Node is a Reflector (default: False).
+        sender_udp_port : int
+            The UDP port of the Node to be used by STAMP. If not it is chosen
+            randomly by the STAMP Node (default: None).
+        reflector_udp_port : int
+            The UDP port of the Node to be used by STAMP. If not it is chosen
+            randomly by the STAMP Node (default: None).
+
+        Raises
+        ------
+        NodeIdAlreadyExistsError
+            If `node_id` is already used.
+        """
+
+        logger.debug('Adding a new STAMP Node:\n'
+                     'node_id=%s, grpc_ip=%s, grpc_port=%s, ip=%s, '
+                     'sender_udp_port=%s, reflector_udp_port=%s, '
+                     'interfaces=%s, stamp_source_ipv6_address=%s, '
+                     'is_sender=%s, is_reflector=%s',
+                     node_id, grpc_ip, grpc_port, ip, sender_port,
+                     reflector_port, interfaces,
+                     stamp_source_ipv6_address, is_sender, is_reflector)
+
+        # Check if node is a Sender or a Reflector
+        if not is_sender and not is_reflector:
+            logger.error('The node should be a Sender or a Reflector')
+
         # Check if node_id is already taken
         if self.stamp_nodes.get(node_id, None) is not None:
             raise NodeIdAlreadyExistsError
 
         # Create a STAMP Sender object and store it
-        node = STAMPReflector(
+        node = STAMPNode(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
-            udp_port=udp_port, interfaces=interfaces,
-            stamp_source_ipv6_address=stamp_source_ipv6_address)
+            sender_udp_port=sender_port,
+            reflector_udp_port=reflector_port,
+            interfaces=interfaces,
+            stamp_source_ipv6_address=stamp_source_ipv6_address,
+            is_sender=is_sender, is_reflector=is_reflector)
         self.stamp_nodes[node_id] = node
 
         # Initialize the node, eventually
         if initialize:
-            self.init_reflector(node_id)
+            if is_sender:
+                self.init_sender(node_id)
+            if is_reflector:
+                self.init_reflector(node_id)
 
     def init_sender(self, node_id):
         """
@@ -1272,9 +1206,9 @@ class Controller:
 
         ssid : int
             The 16-bit STAMP Session Identifier (SSID).
-        sender : controller.STAMPSender
+        sender : controller.STAMPNode
             An object that represents the STAMP Session Sender
-        reflector : controller.STAMPReflector
+        reflector : controller.STAMPNode
             An object that represents the STAMP Session Reflector.
         sidlist : list, optional
             The segment list for the direct path (Sender -> Reflector)
@@ -1364,9 +1298,9 @@ class Controller:
         ----------
         ssid : int
             The 16-bit STAMP Session Identifier (SSID).
-        sender : controller.STAMPSender
+        sender : controller.STAMPNode
             An object that represents the STAMP Session Sender
-        reflector : controller.STAMPReflector
+        reflector : controller.STAMPNode
             An object that represents the STAMP Session Reflector.
         return_sidlist : list, optional
             The segment list for the return path (Reflector -> Sender)
@@ -2531,7 +2465,7 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
 
 
 def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
-                    secure_mode=False):
+                    secure_mode=False, server=None):
     """
     Run a gRPC server that will accept RPCs on the provided IP address and
      port and block until the server is terminated.
@@ -2546,14 +2480,24 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
          (default is 12345).
     secure_mode : bool, optional
         Whether to enable or not gRPC secure mode (default is False).
+    server : optional
+        An existing gRPC server. If None, a new gRPC server is created.
 
     Returns
     -------
-    None
+    The STAMP controller if an existing server has been provided, otherwise
+    block indefinitely and never return.
     """
 
     # Create a Controller object
     controller = Controller()
+
+    # If a reference to an existing gRPC server has been passed as argument,
+    # attach the gRPC interface to the existing server
+    if server is not None:
+        controller_pb2_grpc.add_STAMPControllerServiceServicer_to_server(
+            STAMPControllerServicer(controller), server)
+        return controller
 
     # Create the gRPC server
     logger.debug('Creating the gRPC server')
