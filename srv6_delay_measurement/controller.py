@@ -52,7 +52,8 @@ from exceptions import (
     NotAStampSenderError, ResetSTAMPNodeError,
     STAMPSessionNotFoundError,
     StartSTAMPSessionError,
-    StopSTAMPSessionError)
+    StopSTAMPSessionError,
+    STAMPSessionsExistError)
 
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
