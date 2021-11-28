@@ -3,3 +3,6 @@
 .vscode/
 __pycache__/
 srv6_delay_measurement/commons/protos/srv6pm/gen-py/
+build/
+dist/
+*.egg-info
