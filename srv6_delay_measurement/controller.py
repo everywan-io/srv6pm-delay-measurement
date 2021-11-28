@@ -190,6 +190,8 @@ class STAMPNode:
         self.is_sender = is_sender
         # Is Reflector?
         self.is_reflector = is_reflector
+        # Number of STAMP Sessions on the node
+        self.sessions_count = 0
 
     def is_stamp_sender(self):
         return self.is_sender
@@ -844,6 +846,42 @@ class Controller:
                 self.init_sender(node_id)
             if is_reflector:
                 self.init_reflector(node_id)
+
+    def remove_stamp_node(self, node_id):
+        """
+        Remove a STAMP node.
+
+        Parameters
+        ----------
+        node_id : str
+            The identifier of the STAMP Reflector to be initialized.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NodeIdNotFoundError
+            If `node_id` does not correspond to any existing node.
+        STAMPSessionsExistError
+            If STAMP Sessions exist on the node.
+        """
+
+        logger.debug('Removing STAMP node')
+
+        # Retrieve the node information from the dict of STAMP nodes
+        logger.debug('Checking if node exists')
+        node = self.stamp_nodes.get(node_id, None)
+        if node is None:
+            logger.error('STAMP node not found')
+            raise NodeIdNotFoundError
+
+        if node.sessions_count != 0:
+            raise STAMPSessionsExistError
+
+        # Remove the STAMP node
+        del self.stamp_nodes[node_id]
 
     def init_sender(self, node_id):
         """
@@ -1562,6 +1600,10 @@ class Controller:
         # Store STAMP Session
         self.stamp_sessions[ssid] = stamp_session
 
+        # Increase sessions counter on the Sender and Reflector
+        stamp_session.sender.sessions_count += 1
+        stamp_session.reflector.sessions_count += 1
+
         # Return the SSID allocated for the STAMP session
         logger.debug('STAMP Session created successfully, ssid: %d', ssid)
         return ssid
@@ -1718,6 +1760,10 @@ class Controller:
 
         # Mark the SSID as reusable
         self.reusable_ssid.add(ssid)
+        
+        # Decrease sessions counter on the Sender and Reflector
+        stamp_session.sender.sessions_count -= 1
+        stamp_session.reflector.sessions_count -= 1
 
         logger.debug('STAMP Session destroyed successfully')
 
@@ -2076,7 +2122,30 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
 
         logger.debug('UnregisterStampNode RPC invoked. Request: %s', request)
 
-        raise NotImplementedError
+        # Try to unregister the STAMP node
+        try:
+            self.controller.unregister_stamp_node(node_id=request.node_id)
+        except NodeIdNotFoundError:
+            # No STAMP node corresponding to the node ID, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'No STAMP node corresponding to the node ID')
+            return controller_pb2.InitStampNodeReply(
+                status=common_pb2.StatusCode.STATUS_CODE_NODE_NOT_FOUND,
+                description='No STAMP node corresponding to the node ID')
+        except STAMPSessionsExistError:
+            # The provided UDP port is not valid, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'STAMP Sessions exist on the node. Destroy all '
+                          'sessions before calling unregister.')
+            return controller_pb2.InitStampNodeReply(
+                status=common_pb2.StatusCode.STATUS_CODE_SESSION_EXISTS,
+                description='STAMP Sessions exist on the node. Destroy all '
+                            'sessions before calling unregister.')
+
+        # Return with success status code
+        logger.debug('InitStampNode RPC completed')
+        return controller_pb2.InitStampNodeReply(
+            status=common_pb2.StatusCode.STATUS_CODE_SUCCESS)
 
     def InitStampNode(self, request, context):
         """RPC used to initialize the STAMP nodes."""

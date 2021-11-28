@@ -514,6 +514,8 @@ class STAMPSenderSession(STAMPSession):
         UDP port of STAMP Session Reflector.
     sidlist : list
         Segment List for the direct SRv6 path (Sender -> Reflector).
+    interval : int
+        Interval (in seconds) between two STAMP packets.
     auth_mode : utils.AuthenticationMode
         Authentication Mode (i.e. Authenticated or Unauthenticated).
     key_chain : str
@@ -547,7 +549,7 @@ class STAMPSenderSession(STAMPSession):
     """
 
     def __init__(self, ssid, reflector_ip, reflector_udp_port,
-                 sidlist, auth_mode, key_chain, timestamp_format,
+                 sidlist, interval, auth_mode, key_chain, timestamp_format,
                  packet_loss_type, delay_measurement_mode, stop_flag=None,
                  stamp_source_ipv6_address=None):
         """
@@ -563,6 +565,8 @@ class STAMPSenderSession(STAMPSession):
             UDP port of STAMP Session Reflector.
         sidlist : list
             Segment List for the direct SRv6 path (Sender -> Reflector).
+        interval : int
+            Interval (in seconds) between two STAMP packets.
         auth_mode : utils.AuthenticationMode
             Authentication Mode (i.e. Authenticated or Unauthenticated).
         key_chain : str
@@ -594,6 +598,8 @@ class STAMPSenderSession(STAMPSession):
         self.delay_measurement_mode = delay_measurement_mode
         # Segment List for the direct SRv6 path (Sender -> Reflector)
         self.sidlist = sidlist
+        # Interval (in seconds) between two STAMP packets
+        self.interval = interval
         # A queue to store the Test results for this STAMP Session
         self.test_results = queue.Queue()
         # Flag used to stop the STAMP Session
