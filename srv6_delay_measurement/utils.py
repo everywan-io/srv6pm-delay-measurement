@@ -25,12 +25,20 @@
 
 """Utils for SRv6 Delay Measurement"""
 
+from ipaddress import (
+    IPv4Interface,
+    IPv6Interface,
+    AddressValueError
+)
+
+from socket import AF_INET, AF_INET6
+
 import enum
 import queue
 import logging
 
 import common_pb2
-from libs.libstamp import (
+from .libs.libstamp import (
     AuthenticationMode,
     DelayMeasurementMode,
     PacketLossType,
@@ -780,3 +788,96 @@ class STAMPReflectorSession(STAMPSession):
         self.session_reflector_mode = session_reflector_mode
         # Segment List for the return SRv6 path (Reflector -> Sender)
         self.return_sidlist = return_sidlist
+
+
+def validate_ipv6_address(ip):
+    """
+    Utility function to check if the IP is a valid IPv6 address.
+
+    Parameters
+    ----------
+    ip : str
+        The IP address to validate.
+
+    Returns
+    -------
+    is_valid : bool
+        True if the IP is a valid IPv6 address, False otherwise.
+    """
+
+    if ip is None:
+        return False
+    try:
+        IPv6Interface(ip)
+        return True
+    except AddressValueError:
+        return False
+
+
+def validate_ipv4_address(ip):
+    """
+    Utility function to check if the IP is a valid IPv4 address.
+
+    Parameters
+    ----------
+    ip : str
+        The IP address to validate.
+
+    Returns
+    -------
+    is_valid : bool
+        True if the IP is a valid IPv4 address, False otherwise.
+    """
+
+    if ip is None:
+        return False
+    try:
+        IPv4Interface(ip)
+        return True
+    except AddressValueError:
+        return False
+
+
+def validate_ip_address(ip):
+    """
+    Utility function to check if the IP is a valid address.
+
+    Parameters
+    ----------
+    ip : str
+        The IP address to validate.
+
+    Returns
+    -------
+    is_valid : bool
+        True if the IP is a valid IP address, False otherwise.
+    """
+
+    return validate_ipv4_address(ip) or validate_ipv6_address(ip)
+
+
+def get_address_family(ip):
+    """
+    Utility function to get the IP address family.
+
+    Parameters
+    ----------
+    ip : str
+        The IP address to validate.
+
+    Returns
+    -------
+    family : bool
+        AF_INET if the IP is an IPv4 address, AF_INET6 if the IP is an IPv6
+        address, None if the IP address is invalid.
+    """
+
+    if validate_ipv6_address(ip):
+        # IPv6 address
+        return AF_INET6
+    elif validate_ipv4_address(ip):
+        # IPv4 address
+        return AF_INET
+    else:
+        # Invalid address
+        return None
