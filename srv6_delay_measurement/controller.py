@@ -1769,8 +1769,8 @@ class Controller:
             logger.debug('Destroying STAMP Session on Reflector')
             request = stamp_reflector_pb2.DestroyStampReflectorSessionRequest()
             request.ssid = ssid
-            reply = stamp_session.reflector.grpc_stub_reflector.DestroyStampSession(
-                request)
+            reply = (stamp_session.reflector
+                     .grpc_stub_reflector.DestroyStampSession(request))
             if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
                 logger.error(
                     'Cannot destroy STAMP Session on Reflector: %s',
@@ -1782,7 +1782,8 @@ class Controller:
         logger.debug('Destroying STAMP Session on Sender')
         request = stamp_sender_pb2.DestroyStampSenderSessionRequest()
         request.ssid = ssid
-        reply = stamp_session.sender.grpc_stub_sender.DestroyStampSession(request)
+        reply = (stamp_session.sender
+                 .grpc_stub_sender.DestroyStampSession(request))
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error(
                 'Cannot destroy STAMP Session on Sender: %s',
@@ -1829,7 +1830,8 @@ class Controller:
         logger.debug('Fetching results from STAMP Sender')
         request = stamp_sender_pb2.GetStampSessionResultsRequest()
         request.ssid = ssid
-        reply = stamp_session.sender.grpc_stub_sender.GetStampSessionResults(request)
+        reply = (stamp_session.sender
+                 .grpc_stub_sender.GetStampSessionResults(request))
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
             logger.error(
                 'Cannot fetch STAMP Session results (SSID %d): %s',

@@ -32,7 +32,6 @@ import grpc
 import logging
 import sys
 
-import sys
 from pkg_resources import resource_filename
 sys.path.append(resource_filename(__name__, 'commons/protos/srv6pm/gen_py/'))
 
@@ -58,6 +57,8 @@ STATUS_INTERNAL_SERVER_ERROR = 500
 STATUS_SERVICE_UNAVAILABLE = 503
 
 # Parser for gRPC errors
+
+
 def parse_grpc_error(e, ip, port):
     status_code = e.code()
     details = e.details()
@@ -90,7 +91,8 @@ class STAMPError(Exception):
     def __init__(self, msg=None):
         self.msg = ''
         if msg is not None:
-            self.msg = 'An error occurred during the operation: {msg}'.format(msg=msg)
+            self.msg = 'An error occurred during the operation: {msg}'.format(
+                msg=msg)
         super().__init__(self.msg)
 
 
@@ -135,9 +137,13 @@ class NorthboundInterface:
                                                    grpc_client_credentials)
             else:
                 self.channel = grpc.insecure_channel(server_address)
-        return controller_pb2_grpc.STAMPControllerServiceStub(self.channel), self.channel
+        return (controller_pb2_grpc.STAMPControllerServiceStub(self.channel),
+                self.channel)
 
-    def register_stamp_sender(self, node_id, grpc_ip, grpc_port, ip, udp_port=None, interfaces=None, stamp_source_ipv6_address=None, initialize=True):
+    def register_stamp_sender(self, node_id, grpc_ip, grpc_port, ip,
+                              udp_port=None, interfaces=None,
+                              stamp_source_ipv6_address=None,
+                              initialize=True):
         # Create request
         request = controller_pb2.RegisterStampSenderRequest()
         request.node_id = node_id
@@ -164,7 +170,10 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def register_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip, udp_port, interfaces=None, stamp_source_ipv6_address=None, initialize=True):
+    def register_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip,
+                                 udp_port, interfaces=None,
+                                 stamp_source_ipv6_address=None,
+                                 initialize=True):
         # Create request
         request = controller_pb2.RegisterStampReflectorRequest()
         request.node_id = node_id
@@ -241,8 +250,9 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def create_stamp_session(self, sender_id, reflector_id=None, direct_sidlist=None,
-                             return_sidlist=None, interval=None, auth_mode=None,
+    def create_stamp_session(self, sender_id, reflector_id=None,
+                             direct_sidlist=None, return_sidlist=None,
+                             interval=None, auth_mode=None,
                              key_chain=None, timestamp_format=None,
                              packet_loss_type=None,
                              delay_measurement_mode=None,
@@ -269,9 +279,11 @@ class NorthboundInterface:
         if packet_loss_type is not None:
             request.stamp_params.packet_loss_type = packet_loss_type
         if delay_measurement_mode is not None:
-            request.stamp_params.delay_measurement_mode = delay_measurement_mode
+            request.stamp_params.delay_measurement_mode = \
+                delay_measurement_mode
         if session_reflector_mode is not None:
-            request.stamp_params.session_reflector_mode = session_reflector_mode
+            request.stamp_params.session_reflector_mode = \
+                session_reflector_mode
         if sender_source_ip is not None:
             request.sender_source_ip = sender_source_ip
         if reflector_source_ip is not None:
@@ -361,19 +373,25 @@ class NorthboundInterface:
             results = list()
             for result in reply.results:
                 measurement_direction = 'unspec'
-                if result.measurement_direction == controller_pb2.MeasurementDirection.MEASUREMENT_DIRECTION_DIRECT:
+                if (result.measurement_direction == controller_pb2
+                        .MeasurementDirection.MEASUREMENT_DIRECTION_DIRECT):
                     measurement_direction = 'direct'
-                elif result.measurement_direction == controller_pb2.MeasurementDirection.MEASUREMENT_DIRECTION_RETURN:
+                elif (result.measurement_direction == controller_pb2
+                      .MeasurementDirection.MEASUREMENT_DIRECTION_RETURN):
                     measurement_direction = 'return'
-                elif result.measurement_direction == controller_pb2.MeasurementDirection.MEASUREMENT_DIRECTION_BOTH:
+                elif (result.measurement_direction == controller_pb2
+                      .MeasurementDirection.MEASUREMENT_DIRECTION_BOTH):
                     measurement_direction = 'both'
 
                 measurement_type = 'unspec'
-                if result.measurement_type == controller_pb2.MeasurementType.MEASUREMENT_TYPE_UNSPECIFIED:
+                if (result.measurement_type == controller_pb2
+                        .MeasurementType.MEASUREMENT_TYPE_UNSPECIFIED):
                     measurement_type = 'direct'
-                elif result.measurement_type == controller_pb2.MeasurementType.MEASUREMENT_TYPE_LOSS:
+                elif (result.measurement_type == controller_pb2
+                      .MeasurementType.MEASUREMENT_TYPE_LOSS):
                     measurement_type = 'loss'
-                elif result.measurement_type == controller_pb2.MeasurementType.MEASUREMENT_TYPE_DELAY:
+                elif (result.measurement_type == controller_pb2
+                      .MeasurementType.MEASUREMENT_TYPE_DELAY):
                     measurement_type = 'delay'
 
                 new_result = {
@@ -393,8 +411,10 @@ class NorthboundInterface:
                         }
                     }
                 }
-                new_result['results']['direct_path']['average_delay'] = result.direct_path_average_delay
-                new_result['results']['return_path']['average_delay'] = result.return_path_average_delay
+                new_result['results']['direct_path']['average_delay'] = \
+                    result.direct_path_average_delay
+                new_result['results']['return_path']['average_delay'] = \
+                    result.return_path_average_delay
                 for res in result.direct_path_results:
                     new_result['results']['direct_path']['delays'].append({
                         'id': res.id,
@@ -432,9 +452,11 @@ class NorthboundInterface:
             for stamp_session in reply.stamp_sessions:
 
                 session_status = 'unspec'
-                if stamp_session.status == controller_pb2.STAMPSessionStatus.STAMP_SESSION_STATUS_RUNNING:
+                if (stamp_session.status == controller_pb2
+                        .STAMPSessionStatus.STAMP_SESSION_STATUS_RUNNING):
                     session_status = 'running'
-                elif stamp_session.status == controller_pb2.STAMPSessionStatus.STAMP_SESSION_STATUS_STOPPED:
+                elif (stamp_session.status == controller_pb2
+                      .STAMPSessionStatus.STAMP_SESSION_STATUS_STOPPED):
                     session_status = 'stopped'
 
                 new_session = {
@@ -458,8 +480,10 @@ class NorthboundInterface:
                     stamp_session.stamp_params.delay_measurement_mode,
                     'session_reflector_mode':
                     stamp_session.stamp_params.session_reflector_mode,
-                    'direct_sidlist': list(stamp_session.direct_sidlist.segments),
-                    'return_sidlist': list(stamp_session.return_sidlist.segments),
+                    'direct_sidlist':
+                    list(stamp_session.direct_sidlist.segments),
+                    'return_sidlist':
+                    list(stamp_session.return_sidlist.segments),
                     'average_delay_direct_path':
                     stamp_session.average_delay_direct_path,
                     'average_delay_return_path':

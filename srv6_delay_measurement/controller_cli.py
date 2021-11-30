@@ -31,7 +31,6 @@ Implementation of a SDN Controller CLI.
 import argparse
 import logging
 import pprint
-import time
 
 from . import nb_controller_api
 
@@ -59,11 +58,13 @@ class InvalidArgument(Exception):
         super().__init__(self.msg)
 
 
-def register_sender(controller_ip, controller_port, node_id, grpc_ip, grpc_port, ip, udp_port=None, interfaces=None, stamp_source_ipv6_address=None, initialize=True):
+def register_sender(controller_ip, controller_port, node_id, grpc_ip,
+                    grpc_port, ip, udp_port=None, interfaces=None,
+                    stamp_source_ipv6_address=None, initialize=True):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.register_stamp_sender(
@@ -72,16 +73,19 @@ def register_sender(controller_ip, controller_port, node_id, grpc_ip, grpc_port,
         grpc_port=grpc_port,
         ip=ip,
         udp_port=udp_port,
+        interfaces=interfaces,
         stamp_source_ipv6_address=stamp_source_ipv6_address,  # optional
         initialize=initialize
     )
 
 
-def register_reflector(controller_ip, controller_port, node_id, grpc_ip, grpc_port, ip, udp_port, interfaces=None, stamp_source_ipv6_address=None, initialize=True):
+def register_reflector(controller_ip, controller_port, node_id, grpc_ip,
+                       grpc_port, ip, udp_port, interfaces=None,
+                       stamp_source_ipv6_address=None, initialize=True):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.register_stamp_reflector(
@@ -90,6 +94,7 @@ def register_reflector(controller_ip, controller_port, node_id, grpc_ip, grpc_po
         grpc_port=grpc_port,
         ip=ip,
         udp_port=udp_port,
+        interfaces=interfaces,
         stamp_source_ipv6_address=stamp_source_ipv6_address,  # optional
         initialize=initialize
     )
@@ -98,8 +103,8 @@ def register_reflector(controller_ip, controller_port, node_id, grpc_ip, grpc_po
 def unregister_node(controller_ip, controller_port, node_id):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.unregister_stamp_node(node_id=node_id)
@@ -108,8 +113,8 @@ def unregister_node(controller_ip, controller_port, node_id):
 def init_node(controller_ip, controller_port, node_id):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.init_stamp_node(node_id=node_id)
@@ -118,25 +123,26 @@ def init_node(controller_ip, controller_port, node_id):
 def reset_node(controller_ip, controller_port, node_id):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.reset_stamp_node(node_id=node_id)
 
 
-def create_session(controller_ip, controller_port, sender_id, reflector_id=None, direct_sidlist=None,
-                             return_sidlist=None, interval=None, auth_mode=None,
-                             key_chain=None, timestamp_format=None,
-                             packet_loss_type=None,
-                             delay_measurement_mode=None,
-                             session_reflector_mode=None,
-                             sender_source_ip=None,
-                             reflector_source_ip=None, description=None):
+def create_session(controller_ip, controller_port, sender_id,
+                   reflector_id=None, direct_sidlist=None,
+                   return_sidlist=None, interval=None, auth_mode=None,
+                   key_chain=None, timestamp_format=None,
+                   packet_loss_type=None,
+                   delay_measurement_mode=None,
+                   session_reflector_mode=None,
+                   sender_source_ip=None,
+                   reflector_source_ip=None, description=None):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.create_stamp_session(
@@ -157,8 +163,8 @@ def create_session(controller_ip, controller_port, sender_id, reflector_id=None,
 def start_session(controller_ip, controller_port, ssid):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.start_stamp_session(ssid=ssid)
@@ -167,8 +173,8 @@ def start_session(controller_ip, controller_port, ssid):
 def stop_session(controller_ip, controller_port, ssid):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.stop_stamp_session(ssid=ssid)
@@ -177,8 +183,8 @@ def stop_session(controller_ip, controller_port, ssid):
 def destroy_session(controller_ip, controller_port, ssid):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     nb_interface.destroy_stamp_session(ssid=ssid)
@@ -187,8 +193,8 @@ def destroy_session(controller_ip, controller_port, ssid):
 def get_results(controller_ip, controller_port, ssid):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     pprint.pprint(nb_interface.get_stamp_results(ssid=ssid), indent=2)
@@ -197,8 +203,8 @@ def get_results(controller_ip, controller_port, ssid):
 def get_sessions(controller_ip, controller_port, ssid):
 
     nb_interface = nb_controller_api.NorthboundInterface(
-        server_ip = controller_ip,
-        server_port = controller_port
+        server_ip=controller_ip,
+        server_port=controller_port
     )
 
     pprint.pprint(nb_interface.get_stamp_sessions(ssid=ssid), indent=2)
@@ -213,12 +219,14 @@ def raise_exception_on_mandatory_param_omitted(operation, args):
     if operation == 'register-sender':
         raise_exception_if_param_is_none('--node-id', args.node_id)
         raise_exception_if_param_is_none('--node-grpc-ip', args.node_grpc_ip)
-        raise_exception_if_param_is_none('--node-grpc-port', args.node_grpc_port)
+        raise_exception_if_param_is_none(
+            '--node-grpc-port', args.node_grpc_port)
         raise_exception_if_param_is_none('--node-ip', args.node_ip)
     elif operation == 'register-reflector':
         raise_exception_if_param_is_none('--node-id', args.node_id)
         raise_exception_if_param_is_none('--node-grpc-ip', args.node_grpc_ip)
-        raise_exception_if_param_is_none('--node-grpc-port', args.node_grpc_port)
+        raise_exception_if_param_is_none(
+            '--node-grpc-port', args.node_grpc_port)
         raise_exception_if_param_is_none('--node-ip', args.node_ip)
         raise_exception_if_param_is_none('--udp-port', args.udp_port)
     elif operation == 'unregister-node':
@@ -247,28 +255,28 @@ def dispatch_operation(operation, args):
 
     if operation == 'register-sender':
         return register_sender(
-            controller_ip=args.controller_ip, 
-            controller_port=args.controller_port, 
-            node_id=args.node_id, 
+            controller_ip=args.controller_ip,
+            controller_port=args.controller_port,
+            node_id=args.node_id,
             grpc_ip=args.node_grpc_ip,
             grpc_port=args.node_grpc_port,
             ip=args.node_ip,
             udp_port=args.udp_port,
             interfaces=args.interfaces,
-             stamp_source_ipv6_address=args.node_source_ip,
-              initialize=args.initialize_node)
+            stamp_source_ipv6_address=args.node_source_ip,
+            initialize=args.initialize_node)
     if operation == 'register-reflector':
         return register_reflector(
-            controller_ip=args.controller_ip, 
-            controller_port=args.controller_port, 
-            node_id=args.node_id, 
+            controller_ip=args.controller_ip,
+            controller_port=args.controller_port,
+            node_id=args.node_id,
             grpc_ip=args.node_grpc_ip,
             grpc_port=args.node_grpc_port,
             ip=args.node_ip,
             udp_port=args.udp_port,
             interfaces=args.interfaces,
-             stamp_source_ipv6_address=args.node_source_ip,
-              initialize=args.initialize_node)
+            stamp_source_ipv6_address=args.node_source_ip,
+            initialize=args.initialize_node)
     if operation == 'unregister-node':
         return unregister_node(
             controller_ip=args.controller_ip,
@@ -342,7 +350,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description='SDN Controller CLI.')
     parser.add_argument('--controller-ip', dest='controller_ip', type=str,
-                        help='IP address of the SDN Controller', default=DEFAULT_GRPC_IP)
+                        help='IP address of the SDN Controller',
+                        default=DEFAULT_GRPC_IP)
     parser.add_argument('--controller-port', dest='controller_port', type=int,
                         default=DEFAULT_GRPC_PORT,
                         help='gRPC port of the controller (default: 54321)')
@@ -351,9 +360,10 @@ def parse_arguments():
 
     parser.add_argument('--operation', dest='operation', required=True,
                         choices=['register-sender', 'register-reflector',
-                        'unregister-node', 'init-node', 'reset-node',
-                        'create-session', 'start-session', 'stop-session',
-                        'destroy-session', 'get-results', 'get-sessions'],
+                                 'unregister-node', 'init-node', 'reset-node',
+                                 'create-session', 'start-session',
+                                 'stop-session', 'destroy-session',
+                                 'get-results', 'get-sessions'],
                         help='gRPC port of the controller (default: 54321)')
 
     parser.add_argument('--node-id', dest='node_id', type=str,
@@ -367,20 +377,27 @@ def parse_arguments():
     parser.add_argument('--udp-port', dest='udp_port', type=int,
                         help='UDP port used for STAMP')
     parser.add_argument('--interfaces', dest='interfaces', nargs='+',
-                        help='Interfaces on which STAMP should be listen for STAMP packets')
+                        help='Interfaces on which STAMP should be listen '
+                        'for STAMP packets')
     parser.add_argument('--node-source-ip', dest='node_source_ip', type=str,
-                        help='IPv6 address to be used as source for the STAMP packets')
-    parser.add_argument('--initialize-node', dest='initialize_node', action='store_true',
-                        help='Define whether to automatically initialize the STAMP node after its creation')
+                        help='IPv6 address to be used as source for the '
+                        'STAMP packets')
+    parser.add_argument('--initialize-node', dest='initialize_node',
+                        action='store_true', help='Define whether to '
+                        'automatically initialize the STAMP node after its '
+                        'creation')
 
     parser.add_argument('--ssid', dest='ssid', type=int,
                         help='STAMP Session Identifier (SSID)')
-    parser.add_argument('--session-description', dest='session_description', type=str,
-                        help='A description for the STAMP Session to be created')
+    parser.add_argument('--session-description', dest='session_description',
+                        type=str, help='A description for the STAMP Session '
+                        'to be created')
     parser.add_argument('--sender-id', dest='sender_id', type=str,
-                        help='ID of the STAMP Sender to be used for the STAMP Session')
+                        help='ID of the STAMP Sender to be used for the '
+                        'STAMP Session')
     parser.add_argument('--reflector-id', dest='reflector_id', type=str,
-                        help='ID of the STAMP Reflector to be used for the STAMP Session')
+                        help='ID of the STAMP Reflector to be used for the '
+                        'STAMP Session')
     parser.add_argument('--direct-sidlist', dest='direct_sidlist',  nargs='+',
                         help='Segment list of the direct path to test')
     parser.add_argument('--return-sidlist', dest='return_sidlist', nargs='+',
@@ -391,18 +408,22 @@ def parse_arguments():
                         help='Authentication Mode')
     parser.add_argument('--key-chain', dest='key_chain', type=str,
                         help='Key chain')
-    parser.add_argument('--timestamp-format', dest='timestamp_format', type=str,
-                        help='Timestamp Format')
-    parser.add_argument('--packet-loss-type', dest='packet_loss_type', type=str,
-                        help='Packet Loss Type')
-    parser.add_argument('--delay-measurement-mode', dest='delay_measurement_mode', type=str,
+    parser.add_argument('--timestamp-format', dest='timestamp_format',
+                        type=str, help='Timestamp Format')
+    parser.add_argument('--packet-loss-type', dest='packet_loss_type',
+                        type=str, help='Packet Loss Type')
+    parser.add_argument('--delay-measurement-mode',
+                        dest='delay_measurement_mode', type=str,
                         help='Delay Measurement Mode')
-    parser.add_argument('--session-reflector-mode', dest='session_reflector_mode', type=str,
+    parser.add_argument('--session-reflector-mode',
+                        dest='session_reflector_mode', type=str,
                         help='Session Reflector Mode')
-    parser.add_argument('--sender-source-ip', dest='sender_source_ip', type=str,
-                        help='IP address to be used as source of the STAMP packets')
-    parser.add_argument('--reflector-source-ip', dest='reflector_source_ip', type=str,
-                        help='IP address to be used as source of the STAMP packets')
+    parser.add_argument('--sender-source-ip', dest='sender_source_ip',
+                        type=str, help='IP address to be used as source of '
+                        'the STAMP packets')
+    parser.add_argument('--reflector-source-ip', dest='reflector_source_ip',
+                        type=str, help='IP address to be used as source of '
+                        'the STAMP packets')
 
     args = parser.parse_args()
 

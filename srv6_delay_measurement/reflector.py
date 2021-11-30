@@ -1051,8 +1051,9 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
     # If a reference to an existing gRPC server has been passed as argument,
     # attach the gRPC interface to the existing server
     if server is not None:
-        stamp_reflector_pb2_grpc.add_STAMPSessionReflectorServiceServicer_to_server(
-            STAMPSessionReflectorServicer(stamp_session_reflector), server)
+        (stamp_reflector_pb2_grpc
+         .add_STAMPSessionReflectorServiceServicer_to_server(
+            STAMPSessionReflectorServicer(stamp_session_reflector), server))
         return stamp_session_reflector
 
     # Create the gRPC server
