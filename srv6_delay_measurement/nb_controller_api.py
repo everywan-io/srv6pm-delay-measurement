@@ -27,13 +27,20 @@
 Implementation of a Northbound interface.
 """
 
+from socket import AF_INET, AF_INET6
 import grpc
 import logging
 import sys
 
+import sys
+from pkg_resources import resource_filename
+sys.path.append(resource_filename(__name__, 'commons/protos/srv6pm/gen_py/'))
+
 import common_pb2
 import controller_pb2
 import controller_pb2_grpc
+
+from .utils import get_address_family
 
 # The IP address and port of the gRPC server started on the SDN controller
 DEFAULT_GRPC_SERVER_IP = '::'
@@ -107,7 +114,14 @@ class NorthboundInterface:
     # Build a grpc stub
     def get_grpc_session(self, address, port, secure):
         # Get the address of the server
-        server_address = '[{ip}]:{port}'.format(ip=address, port=port)
+        addr_family = get_address_family(address)
+        if addr_family == AF_INET6:
+            server_address = f'ipv6:[{address}]:{port}'
+        elif addr_family == AF_INET:
+            server_address = f'ipv4:{address}:{port}'
+        else:
+            logging.error('Invalid address: %s' % address)
+            return
         if self.channel is None:
             # If secure we need to establish a channel with the secure endpoint
             if secure:

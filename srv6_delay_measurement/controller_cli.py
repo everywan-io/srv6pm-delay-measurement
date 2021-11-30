@@ -33,7 +33,7 @@ import logging
 import pprint
 import time
 
-import nb_controller_api
+from . import nb_controller_api
 
 
 # Default command-line arguments
@@ -409,7 +409,7 @@ def parse_arguments():
     return args
 
 
-if __name__ == '__main__':
+def __main():
 
     # Parse and extract command-line arguments
     logger.debug('Parsing arguments')
@@ -430,3 +430,7 @@ if __name__ == '__main__':
         logger.info('Operation completed (OK)')
     except Exception as err:
         logger.error(f'Error - {err}')
+
+
+if __name__ == '__main__':
+    __main()
