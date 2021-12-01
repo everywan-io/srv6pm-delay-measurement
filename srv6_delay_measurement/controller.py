@@ -1619,7 +1619,8 @@ class Controller:
             AuthenticationMode, sender_reply.stamp_params.auth_mode)
 
         # Use SSID as STAMP Session description if description has been not set
-        description = description if description is not None else str(ssid)
+        if description is None:
+            description = f'Session {ssid}'
 
         # Create a STAMP Session object
         stamp_session = STAMPSession(
