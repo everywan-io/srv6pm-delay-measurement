@@ -2335,7 +2335,7 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
         if request.return_sidlist:
             return_sidlist = list(request.return_sidlist.segments)
 
-        interval = None
+        interval = 10  # default interval is 10 seconds
         if request.interval:
             interval = request.interval
 
