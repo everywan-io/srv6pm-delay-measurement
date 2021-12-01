@@ -494,20 +494,22 @@ message STAMPSession {
 
   uint32 interval = 10;
 
+  uint32 duration = 11;
+
   // stamp_params carries the STAMP parameters
-  StampParameters stamp_params = 11;
+  StampParameters stamp_params = 12;
 
 
   // direct_sidlist is the segment list for the direct SRv6 path (i.e. the path
   // Sender->Reflector)
-  SRv6Path direct_sidlist = 12;
+  SRv6Path direct_sidlist = 13;
 
   // return_sidlist is the segment list for the direct SRv6 path (i.e. the path
   // Reflector->Sender)
-  SRv6Path return_sidlist = 13;
+  SRv6Path return_sidlist = 14;
 
-  double average_delay_direct_path = 14;
-  double average_delay_return_path = 15;
+  double average_delay_direct_path = 15;
+  double average_delay_return_path = 16;
 
 
 }

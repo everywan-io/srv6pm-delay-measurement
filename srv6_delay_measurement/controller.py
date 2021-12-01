@@ -28,6 +28,7 @@ Implementation of a SDN Controller capable of controlling STAMP Sessions.
 """
 
 from concurrent import futures
+from threading import Thread
 from socket import AF_INET, AF_INET6
 import argparse
 import logging
@@ -56,6 +57,8 @@ from .exceptions import (
     NotAStampReflectorError,
     NotAStampSenderError, ResetSTAMPNodeError,
     STAMPSessionNotFoundError,
+    STAMPSessionNotRunningError,
+    STAMPSessionRunningError,
     StartSTAMPSessionError,
     StopSTAMPSessionError,
     STAMPSessionsExistError)
@@ -274,7 +277,7 @@ class STAMPSession:
                  reflector_key_chain, sender_timestamp_format,
                  reflector_timestamp_format, packet_loss_type,
                  delay_measurement_mode, session_reflector_mode,
-                 store_individual_delays=False):
+                 store_individual_delays=False, duration=0):
         """
         Constructs all the necessary attributes for the STAMP Reflector object.
 
@@ -313,6 +316,9 @@ class STAMPSession:
         store_individual_delays : bool, optional
             Define whether to store the individual delays or not (default
             False).
+        duration : int, optional
+            Duration of the STAMP Session in seconds. 0 means endless session
+            (default: 0).
         """
 
         # Set STAMP session parameters
@@ -341,6 +347,8 @@ class STAMPSession:
         # return path
         self.stamp_session_return_path_results = STAMPSessionResults(
             ssid=ssid, store_individual_delays=store_individual_delays)
+        # Duration of the STAMP Session (in seconds)
+        self.duration = duration
 
 
 def get_grpc_channel_sender(ip, port):
@@ -1440,7 +1448,8 @@ class Controller:
                              session_reflector_mode=None,
                              store_individual_delays=False,
                              sender_source_ip=None,
-                             reflector_source_ip=None, description=None):
+                             reflector_source_ip=None, description=None,
+                             duration=0):
         """
         Allocate a new SSID and create a STAMP Session (the Sender and the
          Reflector are informed about the new Session).
@@ -1629,7 +1638,8 @@ class Controller:
             packet_loss_type=packet_loss_type,
             delay_measurement_mode=delay_measurement_mode,
             session_reflector_mode=session_reflector_mode,
-            store_individual_delays=store_individual_delays
+            store_individual_delays=store_individual_delays,
+            duration=duration
         )
 
         # Store STAMP Session
@@ -1665,6 +1675,11 @@ class Controller:
             logger.error('Session %d does not exist', ssid)
             raise STAMPSessionNotFoundError(ssid)
 
+        # Check if STAMP Session is running
+        if stamp_session.is_running:
+            logger.error('Session %d already running', ssid)
+            raise STAMPSessionRunningError(ssid=ssid)
+
         # Start STAMP Session on the Reflector, if any
         if stamp_session.reflector is not None:
             logger.debug('Starting STAMP Session on Reflector')
@@ -1690,6 +1705,16 @@ class Controller:
             # Raise an exception
             raise StartSTAMPSessionError(reply.description)
 
+        # Schedule a stop session operation if <duration> parameter has been
+        # set; if duration is 0, we don't schedule a stop task and session
+        # will run indefinitely or until we don't call stop_stamp_session()
+        if stamp_session.duration is not None and stamp_session.duration != 0:
+            logger.debug('Scheduling a stop session operation in '
+                         f'{stamp_session.duration} seconds')
+            Thread(target=self._stop_stamp_session_after,
+                   kwargs={'ssid': ssid,
+                           'seconds': stamp_session.duration}).start()
+
         logger.debug('STAMP Session started successfully')
         stamp_session.is_running = True
 
@@ -1714,6 +1739,11 @@ class Controller:
         if stamp_session is None:
             logger.error('Session %d does not exist', ssid)
             raise STAMPSessionNotFoundError(ssid)
+
+        # Check if STAMP Session is running
+        if not stamp_session.is_running:
+            logger.error('Session %d not running', ssid)
+            raise STAMPSessionNotRunningError(ssid=ssid)
 
         # Stop STAMP Session on the Reflector, if any
         if stamp_session.reflector is not None:
@@ -1741,6 +1771,36 @@ class Controller:
 
         logger.debug('STAMP Session stopped successfully')
         stamp_session.is_running = False
+
+    def _stop_stamp_session_after(self, ssid, seconds):
+        """
+        Wait for X seconds and stop an existing STAMP Session identified by
+        the SSID.
+
+        Parameters
+        ----------
+        ssid : int
+            16-bit STAMP Session Identifier (SSID).
+        seconds : int
+            The seconds to wait before stopping the session.
+
+        Returns
+        -------
+        None
+        """
+
+        logger.debug('Stopping STAMP Session after %d, ssid: %d',
+                     seconds, ssid)
+
+        # Wait for X seconds
+        time.sleep(seconds)
+
+        # Stop the STAMP Session
+        try:
+            return self.stop_stamp_session(ssid)
+        except STAMPSessionNotRunningError:
+            logger.warning('Scheduled STAMP Session stop operation failed:'
+                           'Session %d already stopped', ssid)
 
     def destroy_stamp_session(self, ssid):
         """
@@ -2278,7 +2338,7 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
         if request.interval:
             interval = request.interval
 
-        duration = None
+        duration = 0
         if request.duration:
             duration = request.duration
 
@@ -2329,7 +2389,7 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
                 store_individual_delays=True,
                 sender_source_ip=sender_source_ip,
                 reflector_source_ip=reflector_source_ip,
-                description=description
+                description=description, duration=duration
             )
         except CreateSTAMPSessionError as err:
             # Failed to create a STAMP Session, return an error
@@ -2570,6 +2630,7 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
                 sess.reflector_source_ip = \
                     stamp_session.reflector.stamp_source_ipv6_address
             sess.interval = stamp_session.interval
+            sess.duration = stamp_session.duration
             sess.stamp_params.auth_mode = stamp_session.auth_mode
             sess.stamp_params.key_chain = stamp_session.sender_key_chain
             sess.stamp_params.timestamp_format = \

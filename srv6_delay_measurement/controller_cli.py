@@ -138,7 +138,8 @@ def create_session(controller_ip, controller_port, sender_id,
                    delay_measurement_mode=None,
                    session_reflector_mode=None,
                    sender_source_ip=None,
-                   reflector_source_ip=None, description=None):
+                   reflector_source_ip=None, description=None,
+                   duration=0):
 
     nb_interface = nb_controller_api.NorthboundInterface(
         server_ip=controller_ip,
@@ -156,7 +157,8 @@ def create_session(controller_ip, controller_port, sender_id,
         session_reflector_mode=session_reflector_mode,
         description=description,
         sender_source_ip=sender_source_ip,
-        reflector_source_ip=reflector_source_ip
+        reflector_source_ip=reflector_source_ip,
+        duration=duration
     )
 
 
@@ -309,7 +311,8 @@ def dispatch_operation(operation, args):
             session_reflector_mode=args.session_reflector_mode,
             sender_source_ip=args.sender_source_ip,
             reflector_source_ip=args.reflector_source_ip,
-            description=args.session_description
+            description=args.session_description,
+            duration=args.duration
         )
     if operation == 'start-session':
         return start_session(
@@ -386,6 +389,8 @@ def parse_arguments():
                         action='store_true', help='Define whether to '
                         'automatically initialize the STAMP node after its '
                         'creation')
+    parser.add_argument('--duration', dest='duration', type=int,
+                        help='Duration of the STAMP Session', default=0)
 
     parser.add_argument('--ssid', dest='ssid', type=int,
                         help='STAMP Session Identifier (SSID)')

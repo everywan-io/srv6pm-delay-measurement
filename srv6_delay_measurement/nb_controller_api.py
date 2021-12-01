@@ -258,7 +258,8 @@ class NorthboundInterface:
                              delay_measurement_mode=None,
                              session_reflector_mode=None,
                              sender_source_ip=None,
-                             reflector_source_ip=None, description=None):
+                             reflector_source_ip=None, description=None,
+                             duration=0):
         # Create the request
         request = controller_pb2.CreateStampSessionRequest()
         request.sender_id = sender_id
@@ -290,6 +291,7 @@ class NorthboundInterface:
             request.reflector_source_ip = reflector_source_ip
         if description is not None:
             request.description = description
+        request.duration = duration
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -470,6 +472,7 @@ class NorthboundInterface:
                     'reflector_name': stamp_session.reflector_name,
                     'reflector_source_ip': stamp_session.reflector_source_ip,
                     'interval': stamp_session.interval,
+                    'duration': stamp_session.duration,
                     'auth_mode': stamp_session.stamp_params.auth_mode,
                     'key_chain': stamp_session.stamp_params.key_chain,
                     'timestamp_format':
