@@ -702,7 +702,9 @@ class Controller:
         # Debug mode
         self.debug = debug
         # Last used STAMP Session Identifier (SSID)
-        self.last_ssid = -1
+        # In our implementation, SSID 0 is reserved; therefore, the first
+        # usable SSID is 1
+        self.last_ssid = 0
         # Pool of SSID allocated to STAMP Sessions terminated
         # These can be reused for other STAMP Sessions
         self.reusable_ssid = set()
