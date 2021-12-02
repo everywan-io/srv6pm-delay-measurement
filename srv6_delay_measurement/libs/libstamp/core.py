@@ -129,7 +129,7 @@ class AuthenticationMode(enum.Enum):
     AUTHENTICATION_MODE_UNSPECIFIED = 'unspec'
 
     # STAMP in unauthenticated mode
-    AUTHENTICATION_MODE_UNAUTHENTICATED = 'unauth'
+    AUTHENTICATION_MODE_UNAUTHENTICATED = 'unauthenticated'
 
     # STAMP in authenticated mode (using HMAC SHA 256 algorithm)
     AUTHENTICATION_MODE_HMAC_SHA_256 = 'hmac-sha-256'
