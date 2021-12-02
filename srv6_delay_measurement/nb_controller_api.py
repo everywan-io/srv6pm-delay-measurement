@@ -259,7 +259,7 @@ class NorthboundInterface:
                              session_reflector_mode=None,
                              sender_source_ip=None,
                              reflector_source_ip=None, description=None,
-                             duration=0):
+                             duration=0, start_after_creation=False):
         # Create the request
         request = controller_pb2.CreateStampSessionRequest()
         request.sender_id = sender_id
@@ -301,6 +301,9 @@ class NorthboundInterface:
             # Check return code
             if response.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
                 raise STAMPError(response.description)
+            # Eventually, start the STAMP Session after its creation
+            if start_after_creation:
+                self.start_stamp_session(ssid=response.ssid)
             # Extract and return the SSID
             return response.ssid
         except grpc.RpcError as e:
