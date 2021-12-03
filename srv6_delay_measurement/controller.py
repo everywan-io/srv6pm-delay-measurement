@@ -433,7 +433,8 @@ def get_grpc_channel_reflector(ip, port):
 
 def compute_packet_delay(tx_timestamp, rx_timestamp):
     """
-    Compute the delay of a STAMP packet (either Test or Reply packet).
+    Compute the delay (in milliseconds) of a STAMP packet (either Test or
+    Reply packet).
 
     Parameters
     ----------
@@ -448,8 +449,8 @@ def compute_packet_delay(tx_timestamp, rx_timestamp):
         The delay of the STAMP packet.
     """
 
-    # Return the delay
-    return rx_timestamp - tx_timestamp
+    # Return the delay in milliseconds
+    return (rx_timestamp - tx_timestamp) * 1000
 
 
 def compute_mean_delay_welford(current_mean_delay, count, new_delay):
