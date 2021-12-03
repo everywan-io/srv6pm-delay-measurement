@@ -317,9 +317,8 @@ def ntp_to_unix_timestamp(timestamp_seconds, timestamp_fraction):
         The reassembled NTPv4 Timestamp.
     """
 
-    timestamp = timestamp_seconds + \
-        float('0.{fraction}'.format(fraction=timestamp_fraction)) - \
-        UNIX_TO_NTP_TIMESTAMP_OFFSET
+    timestamp = timestamp_seconds - UNIX_TO_NTP_TIMESTAMP_OFFSET + \
+        float(timestamp_fraction) / float(_32_BIT_MASK)
 
     logging.debug('Reassembling NTP Timestamp, seconds: {seconds}, '
                   'fraction: {fraction}, reassembled timestamp: {timestamp}'
