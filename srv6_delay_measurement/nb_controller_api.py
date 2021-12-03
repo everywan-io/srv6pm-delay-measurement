@@ -141,7 +141,7 @@ class NorthboundInterface:
                 self.channel)
 
     def register_stamp_sender(self, node_id, grpc_ip, grpc_port, ip,
-                              udp_port=None, interfaces=None,
+                              udp_port=None, node_name=None, interfaces=None,
                               stamp_source_ipv6_address=None,
                               initialize=True):
         # Create request
@@ -150,6 +150,8 @@ class NorthboundInterface:
         request.grpc_ip = grpc_ip
         request.grpc_port = grpc_port
         request.ip = ip
+        if node_name is not None:
+            request.node_name = node_name
         if udp_port is not None:
             request.udp_port = udp_port
         if interfaces is not None:
@@ -171,7 +173,7 @@ class NorthboundInterface:
             raise STAMPError(response[1])
 
     def register_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip,
-                                 udp_port, interfaces=None,
+                                 udp_port, node_name=None, interfaces=None,
                                  stamp_source_ipv6_address=None,
                                  initialize=True):
         # Create request
@@ -181,6 +183,8 @@ class NorthboundInterface:
         request.grpc_port = grpc_port
         request.ip = ip
         request.udp_port = udp_port
+        if node_name is not None:
+            request.node_name = node_name
         if interfaces is not None:
             request.interfaces = interfaces
         if stamp_source_ipv6_address is not None:

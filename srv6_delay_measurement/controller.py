@@ -636,12 +636,12 @@ class Controller:
     Methods
     -------
     add_stamp_sender(node_id, grpc_ip, grpc_port, ip, udp_port=None,
-                     interfaces=None, stamp_source_ipv6_address=None,
-                     initialize=True)
+                     node_name=None, interfaces=None,
+                     stamp_source_ipv6_address=None, initialize=True)
         Add a STAMP Sender to the Controller inventory.
     add_stamp_reflector(node_id, grpc_ip, grpc_port, ip, udp_port,
-                        interfaces=None, stamp_source_ipv6_address=None,
-                        initialize=True)
+                        node_name=None, interfaces=None,
+                        stamp_source_ipv6_address=None, initialize=True)
         Add a STAMP Reflector to the Controller inventory.
     init_sender(sender_udp_port=20000, interfaces=None)
         Establish a gRPC connection to a STAMP Session Sender and initialize
@@ -719,8 +719,8 @@ class Controller:
             logger.setLevel(level=logging.INFO)
 
     def add_stamp_sender(self, node_id, grpc_ip, grpc_port, ip, udp_port=None,
-                         interfaces=None, stamp_source_ipv6_address=None,
-                         initialize=True):
+                         node_name=None, interfaces=None,
+                         stamp_source_ipv6_address=None, initialize=True):
         """
         Add a STAMP Sender to the Controller inventory.
 
@@ -731,6 +731,10 @@ class Controller:
         udp_port : int, optional
             The UDP port of the Sender to be used by STAMP. If it is None, the
              port is randomly chosen by the Sender (default is None).
+        node_name : str, optional
+            A human-friendly name for the STAMP node. If this parameter is
+            None, the node identifier (node_id) is used as node name
+            (default: None).
         interfaces : list, optional
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
@@ -752,9 +756,9 @@ class Controller:
 
         logger.debug('Adding a new STAMP Sender:\n'
                      'node_id=%s, grpc_ip=%s, grpc_port=%s, ip=%s, '
-                     'udp_port=%s, interfaces=%s, '
+                     'udp_port=%s, node_name=%s, interfaces=%s, '
                      'stamp_source_ipv6_address=%s', node_id, grpc_ip,
-                     grpc_port, ip, udp_port, interfaces,
+                     grpc_port, ip, udp_port, node_name, interfaces,
                      stamp_source_ipv6_address)
 
         return self.add_stamp_node(
@@ -767,12 +771,13 @@ class Controller:
             initialize=initialize,
             is_sender=True,
             is_reflector=False,
-            sender_port=udp_port
+            sender_port=udp_port,
+            node_name=node_name
         )
 
     def add_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip, udp_port,
-                            interfaces=None, stamp_source_ipv6_address=None,
-                            initialize=True):
+                            node_name=None, interfaces=None,
+                            stamp_source_ipv6_address=None, initialize=True):
         """
         Add a STAMP Reflector to the Controller inventory.
 
@@ -780,6 +785,10 @@ class Controller:
             An identifier to identify the STAMP Reflector
         udp_port : int
             The UDP port of the Reflector to be used by STAMP.
+        node_name : str, optional
+            A human-friendly name for the STAMP node. If this parameter is
+            None, the node identifier (node_id) is used as node name
+            (default: None).
         interfaces : list, optional
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
@@ -801,9 +810,9 @@ class Controller:
 
         logger.debug('Adding a new STAMP Reflector:\n'
                      'node_id=%s, grpc_ip=%s, grpc_port=%s, ip=%s, '
-                     'udp_port=%s, interfaces=%s, '
+                     'udp_port=%s, node_name=%s, interfaces=%s, '
                      'stamp_source_ipv6_address=%s', node_id, grpc_ip,
-                     grpc_port, ip, udp_port, interfaces,
+                     grpc_port, ip, udp_port, node_name, interfaces,
                      stamp_source_ipv6_address)
 
         return self.add_stamp_node(
@@ -816,10 +825,11 @@ class Controller:
             initialize=initialize,
             is_sender=False,
             is_reflector=True,
-            reflector_port=udp_port
+            reflector_port=udp_port,
+            node_name=node_name
         )
 
-    def add_stamp_node(self, node_id, grpc_ip, grpc_port, ip,
+    def add_stamp_node(self, node_id, grpc_ip, grpc_port, ip, node_name=None,
                        interfaces=None, stamp_source_ipv6_address=None,
                        initialize=True, is_sender=False, is_reflector=False,
                        sender_port=None, reflector_port=None):
@@ -828,6 +838,10 @@ class Controller:
 
         node_id : str
             An identifier to identify the STAMP Node
+        node_name : str, optional
+            A human-friendly name for the STAMP node. If this parameter is
+            None, the node identifier (node_id) is used as node name
+            (default: None).
         interfaces : list, optional
             The list of the interfaces on which the STAMP node will listen for
              STAMP packets. If this parameter is None, the node will listen on
@@ -861,10 +875,10 @@ class Controller:
                      'node_id=%s, grpc_ip=%s, grpc_port=%s, ip=%s, '
                      'sender_udp_port=%s, reflector_udp_port=%s, '
                      'interfaces=%s, stamp_source_ipv6_address=%s, '
-                     'is_sender=%s, is_reflector=%s',
+                     'is_sender=%s, is_reflector=%s, node_name=%s',
                      node_id, grpc_ip, grpc_port, ip, sender_port,
-                     reflector_port, interfaces,
-                     stamp_source_ipv6_address, is_sender, is_reflector)
+                     reflector_port, interfaces, stamp_source_ipv6_address,
+                     is_sender, is_reflector, node_name)
 
         # Check if node is a Sender or a Reflector
         if not is_sender and not is_reflector:
@@ -878,7 +892,7 @@ class Controller:
         node = STAMPNode(
             node_id=node_id, grpc_ip=grpc_ip, grpc_port=grpc_port, ip=ip,
             sender_udp_port=sender_port,
-            reflector_udp_port=reflector_port,
+            reflector_udp_port=reflector_port, node_name=node_name,
             interfaces=interfaces,
             stamp_source_ipv6_address=stamp_source_ipv6_address,
             is_sender=is_sender, is_reflector=is_reflector)

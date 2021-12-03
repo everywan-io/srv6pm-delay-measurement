@@ -59,8 +59,9 @@ class InvalidArgument(Exception):
 
 
 def register_sender(controller_ip, controller_port, node_id, grpc_ip,
-                    grpc_port, ip, udp_port=None, interfaces=None,
-                    stamp_source_ipv6_address=None, initialize=True):
+                    grpc_port, ip, udp_port=None, node_name=None,
+                    interfaces=None, stamp_source_ipv6_address=None,
+                    initialize=True):
 
     nb_interface = nb_controller_api.NorthboundInterface(
         server_ip=controller_ip,
@@ -73,6 +74,7 @@ def register_sender(controller_ip, controller_port, node_id, grpc_ip,
         grpc_port=grpc_port,
         ip=ip,
         udp_port=udp_port,
+        node_name=node_name,
         interfaces=interfaces,
         stamp_source_ipv6_address=stamp_source_ipv6_address,  # optional
         initialize=initialize
@@ -80,8 +82,9 @@ def register_sender(controller_ip, controller_port, node_id, grpc_ip,
 
 
 def register_reflector(controller_ip, controller_port, node_id, grpc_ip,
-                       grpc_port, ip, udp_port, interfaces=None,
-                       stamp_source_ipv6_address=None, initialize=True):
+                       grpc_port, ip, udp_port, node_name=None,
+                       interfaces=None, stamp_source_ipv6_address=None,
+                       initialize=True):
 
     nb_interface = nb_controller_api.NorthboundInterface(
         server_ip=controller_ip,
@@ -94,6 +97,7 @@ def register_reflector(controller_ip, controller_port, node_id, grpc_ip,
         grpc_port=grpc_port,
         ip=ip,
         udp_port=udp_port,
+        node_name=node_name,
         interfaces=interfaces,
         stamp_source_ipv6_address=stamp_source_ipv6_address,  # optional
         initialize=initialize
