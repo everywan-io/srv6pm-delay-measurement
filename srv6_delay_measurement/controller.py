@@ -938,6 +938,12 @@ class Controller:
         if node.sessions_count != 0:
             raise STAMPSessionsExistError
 
+        if node.is_sender_initialized:
+            self.reset_stamp_sender(node_id=node_id)
+
+        if node.is_reflector_initialized:
+            self.reset_stamp_reflector(node_id=node_id)
+
         # Remove the STAMP node
         del self.stamp_nodes[node_id]
 
