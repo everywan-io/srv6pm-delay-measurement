@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Variables
-GRPC_STUBS_PATH="./commons/protos/srv6pm/gen-py"
+GRPC_STUBS_PATH="./srv6_delay_measurement/commons/protos/srv6pm/gen-py"
 VENV_ACTIVATE_SCRIPT="./.venv/bin/activate"
-REFLECTOR_FILENAME="./reflector.py"
+REFLECTOR_FILENAME="./srv6_delay_measurement/reflector.py"
 
 # Require root
 if [ "$EUID" -ne 0 ]

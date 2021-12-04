@@ -948,6 +948,42 @@ class Controller:
         # Remove the STAMP node
         del self.stamp_nodes[node_id]
 
+    def remove_stamp_node(self, node_id):
+        """
+        Remove a STAMP node.
+
+        Parameters
+        ----------
+        node_id : str
+            The identifier of the STAMP Reflector to be initialized.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        NodeIdNotFoundError
+            If `node_id` does not correspond to any existing node.
+        STAMPSessionsExistError
+            If STAMP Sessions exist on the node.
+        """
+
+        logger.debug('Removing STAMP node')
+
+        # Retrieve the node information from the dict of STAMP nodes
+        logger.debug('Checking if node exists')
+        node = self.stamp_nodes.get(node_id, None)
+        if node is None:
+            logger.error('STAMP node not found')
+            raise NodeIdNotFoundError
+
+        if node.sessions_count != 0:
+            raise STAMPSessionsExistError
+
+        # Remove the STAMP node
+        del self.stamp_nodes[node_id]
+
     def init_sender(self, node_id):
         """
         Establish a gRPC connection to a STAMP Session Sender and initialize
@@ -1880,6 +1916,10 @@ class Controller:
 
         # Mark the SSID as reusable
         self.reusable_ssid.add(ssid)
+        
+        # Decrease sessions counter on the Sender and Reflector
+        stamp_session.sender.sessions_count -= 1
+        stamp_session.reflector.sessions_count -= 1
 
         # Decrease sessions counter on the Sender and Reflector
         stamp_session.sender.sessions_count -= 1
