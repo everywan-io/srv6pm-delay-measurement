@@ -270,7 +270,8 @@ def dispatch_operation(operation, args):
             udp_port=args.udp_port,
             interfaces=args.interfaces,
             stamp_source_ipv6_address=args.node_source_ip,
-            initialize=args.initialize_node)
+            initialize=args.initialize_node,
+            tenantid=args.tenantid)
     if operation == 'register-reflector':
         return register_reflector(
             controller_ip=args.controller_ip,
@@ -282,22 +283,26 @@ def dispatch_operation(operation, args):
             udp_port=args.udp_port,
             interfaces=args.interfaces,
             stamp_source_ipv6_address=args.node_source_ip,
-            initialize=args.initialize_node)
+            initialize=args.initialize_node,
+            tenantid=args.tenantid)
     if operation == 'unregister-node':
         return unregister_node(
             controller_ip=args.controller_ip,
             controller_port=args.controller_port,
-            node_id=args.node_id)
+            node_id=args.node_id,
+            tenantid=args.tenantid)
     if operation == 'init-node':
         return init_node(
             controller_ip=args.controller_ip,
             controller_port=args.controller_port,
-            node_id=args.node_id)
+            node_id=args.node_id,
+            tenantid=args.tenantid)
     if operation == 'reset-node':
         return reset_node(
             controller_ip=args.controller_ip,
             controller_port=args.controller_port,
-            node_id=args.node_id)
+            node_id=args.node_id,
+            tenantid=args.tenantid)
     if operation == 'create-session':
         return create_session(
             controller_ip=args.controller_ip,
@@ -316,33 +321,39 @@ def dispatch_operation(operation, args):
             sender_source_ip=args.sender_source_ip,
             reflector_source_ip=args.reflector_source_ip,
             description=args.session_description,
-            duration=args.duration
+            duration=args.duration,
+            tenantid=args.tenantid
         )
     if operation == 'start-session':
         return start_session(
             controller_ip=args.controller_ip,
             controller_port=args.controller_port,
-            ssid=args.ssid)
+            ssid=args.ssid,
+            tenantid=args.tenantid)
     if operation == 'stop-session':
         return stop_session(
             controller_ip=args.controller_ip,
             controller_port=args.controller_port,
-            ssid=args.ssid)
+            ssid=args.ssid,
+            tenantid=args.tenantid)
     if operation == 'destroy-session':
         return destroy_session(
             controller_ip=args.controller_ip,
             controller_port=args.controller_port,
-            ssid=args.ssid)
+            ssid=args.ssid,
+            tenantid=args.tenantid)
     if operation == 'get-results':
         return get_results(
             controller_ip=args.controller_ip,
             controller_port=args.controller_port,
-            ssid=args.ssid)
+            ssid=args.ssid,
+            tenantid=args.tenantid)
     if operation == 'get-sessions':
         return get_sessions(
             controller_ip=args.controller_ip,
             controller_port=args.controller_port,
-            ssid=args.ssid)
+            ssid=args.ssid,
+            tenantid=args.tenantid)
 
 
 def parse_arguments():
@@ -433,6 +444,8 @@ def parse_arguments():
     parser.add_argument('--reflector-source-ip', dest='reflector_source_ip',
                         type=str, help='IP address to be used as source of '
                         'the STAMP packets')
+    parser.add_argument('--tenant-id', dest='tenantid', default=None,
+                        type=str, help='ID of the tenant')
 
     args = parser.parse_args()
 

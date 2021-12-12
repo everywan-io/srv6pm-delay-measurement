@@ -91,6 +91,9 @@ message RegisterStampSenderRequest {
   string stamp_source_ipv6_address = 7;
   bool initialize = 8;
 
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 9;
+
 }
 
 // RegisterStampSenderReply carries the arguments returned by the
@@ -118,6 +121,9 @@ message RegisterStampReflectorRequest {
   string stamp_source_ipv6_address = 7;
   bool initialize = 8;
 
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 9;
+
 }
 
 // RegisterStampReflectorReply carries the arguments returned by the
@@ -138,6 +144,9 @@ message UnregisterStampNodeRequest {
 
   // node_id: Identifier of the STAMP node to unregister
   string node_id = 1;
+
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 2;
 
 }
 
@@ -195,6 +204,9 @@ message CreateStampSessionRequest {
   // will be used as source IPv6 address of the STAMP Test Reply packets.
   string reflector_source_ipv6_address = 10;
 
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 11;
+
 }
 
 // CreateStampSessionReply carries the arguments returned by the
@@ -223,6 +235,9 @@ message StartStampSessionRequest {
   // ssid is the STAMP Session Identifier, defined in
   // draft-ietf-ippm-stamp-srpm
   uint32 ssid = 1;
+
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 2;
 
 }
 
@@ -261,6 +276,9 @@ message InitStampNodeRequest {
   // node_id: Identifier of the STAMP node to initialize
   string node_id = 1;
 
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 2;
+
 }
 
 // InitStampNodeReply carries the arguments returned by the InitStampNode RPC
@@ -282,6 +300,9 @@ message StopStampSessionRequest {
   // in draft-ietf-ippm-stamp-srpm
   uint32 ssid = 1;
 
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 2;
+
 }
 
 // DestroyStampSessionRequest carries the parameters required to destroy a
@@ -291,6 +312,9 @@ message DestroyStampSessionRequest {
   // ssid: the STAMP Session Identifier of the STAMP Session to destroy,
   // defined in draft-ietf-ippm-stamp-srpm
   uint32 ssid = 1;
+
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 2;
 
 }
 
@@ -336,6 +360,9 @@ message GetStampResultsRequest {
   // ssid: the STAMP Session Identifier of the STAMP Session to get results
   // for, defined in draft-ietf-ippm-stamp-srpm
   uint32 ssid = 1;
+
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 2;
 
 }
 
@@ -428,6 +455,9 @@ message ResetStampNodeRequest {
   // node_id: Identifier of the STAMP node to initialize
   string node_id = 1;
 
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 2;
+
 }
 
 // ResetStampNodeReply carries the arguments returned by the
@@ -449,6 +479,9 @@ message GetStampSessionsRequest {
   // ssid: the STAMP Session Identifier of the STAMP Session to get
   // If it is not set, all the STAMP sessions are returned
   uint32 ssid = 1;
+
+  // tenantid: tenant identifier, required for supporting multi-tenancy
+  string tenantid = 2;
 
 }
 

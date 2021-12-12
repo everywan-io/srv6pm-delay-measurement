@@ -143,7 +143,7 @@ class NorthboundInterface:
     def register_stamp_sender(self, node_id, grpc_ip, grpc_port, ip,
                               udp_port=None, node_name=None, interfaces=None,
                               stamp_source_ipv6_address=None,
-                              initialize=True):
+                              initialize=True, tenantid=None):
         # Create request
         request = controller_pb2.RegisterStampSenderRequest()
         request.node_id = node_id
@@ -158,6 +158,8 @@ class NorthboundInterface:
             request.interfaces = interfaces
         if stamp_source_ipv6_address is not None:
             request.stamp_source_ipv6_address = stamp_source_ipv6_address
+        if tenantid is not None:
+            request.tenantid = tenantid
         request.initialize = initialize
         try:
             # Get the reference of the stub
@@ -175,7 +177,7 @@ class NorthboundInterface:
     def register_stamp_reflector(self, node_id, grpc_ip, grpc_port, ip,
                                  udp_port, node_name=None, interfaces=None,
                                  stamp_source_ipv6_address=None,
-                                 initialize=True):
+                                 initialize=True, tenantid=None):
         # Create request
         request = controller_pb2.RegisterStampReflectorRequest()
         request.node_id = node_id
@@ -190,6 +192,8 @@ class NorthboundInterface:
         if stamp_source_ipv6_address is not None:
             request.stamp_source_ipv6_address = stamp_source_ipv6_address
         request.initialize = initialize
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -203,10 +207,12 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def unregister_stamp_node(self, node_id):
+    def unregister_stamp_node(self, node_id, tenantid=None):
         # Create request
         request = controller_pb2.UnregisterStampNodeRequest()
         request.node_id = node_id
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -220,10 +226,12 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def init_stamp_node(self, node_id):
+    def init_stamp_node(self, node_id, tenantid=None):
         # Create request
         request = controller_pb2.InitStampNodeRequest()
         request.node_id = node_id
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -237,10 +245,12 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def reset_stamp_node(self, node_id):
+    def reset_stamp_node(self, node_id, tenantid=None):
         # Create request
         request = controller_pb2.ResetStampNodeRequest()
         request.node_id = node_id
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -263,7 +273,8 @@ class NorthboundInterface:
                              session_reflector_mode=None,
                              sender_source_ip=None,
                              reflector_source_ip=None, description=None,
-                             duration=0, start_after_creation=False):
+                             duration=0, start_after_creation=False,
+                             tenantid=None):
         # Create the request
         request = controller_pb2.CreateStampSessionRequest()
         request.sender_id = sender_id
@@ -296,6 +307,8 @@ class NorthboundInterface:
         if description is not None:
             request.description = description
         request.duration = duration
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -314,10 +327,12 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def start_stamp_session(self, ssid):
+    def start_stamp_session(self, ssid, tenantid=None):
         # Create the request
         request = controller_pb2.StartStampSessionRequest()
         request.ssid = ssid
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -331,10 +346,12 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def stop_stamp_session(self, ssid):
+    def stop_stamp_session(self, ssid, tenantid=None):
         # Create the request
         request = controller_pb2.StopStampSessionRequest()
         request.ssid = ssid
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -348,10 +365,12 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def destroy_stamp_session(self, ssid):
+    def destroy_stamp_session(self, ssid, tenantid=None):
         # Create the request
         request = controller_pb2.DestroyStampSessionRequest()
         request.ssid = ssid
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -365,10 +384,12 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def get_stamp_results(self, ssid):
+    def get_stamp_results(self, ssid, tenantid=None):
         # Create the request
         request = controller_pb2.GetStampResultsRequest()
         request.ssid = ssid
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
@@ -442,11 +463,13 @@ class NorthboundInterface:
             response = parse_grpc_error(e, self.server_ip, self.server_port)
             raise STAMPError(response[1])
 
-    def get_stamp_sessions(self, ssid=None):
+    def get_stamp_sessions(self, ssid=None, tenantid=None):
         # Create the request
         request = controller_pb2.StartStampSessionRequest()
         if ssid is not None:
             request.ssid = ssid
+        if tenantid is not None:
+            request.tenantid = tenantid
         try:
             # Get the reference of the stub
             grpc_stub, _ = self.get_grpc_session(
