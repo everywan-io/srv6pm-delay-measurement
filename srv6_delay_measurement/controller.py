@@ -285,25 +285,29 @@ class Controller:
             logger.setLevel(level=logging.INFO)
 
     def get_grpc_channel_sender_cached(self, node):
-        channel, stub = self.sender_stubs.get(node.node_id, None)
+        stub = self.sender_stubs.get(node.node_id, None)
         if stub is None:
             channel, stub = get_grpc_channel_sender(ip=node.grpc_ip,
                                                     port=node.grpc_port)
             self.sender_channels[node.node_id] = channel
             self.sender_stubs[node.node_id] = stub
+        else:
+            channel = self.reflector_channels[node.node_id]
         return channel, stub
 
     def get_grpc_channel_reflector_cached(self, node):
-        channel, stub = self.reflector_stubs.get(node.node_id, None)
+        stub = self.reflector_stubs.get(node.node_id, None)
         if stub is None:
             channel, stub = get_grpc_channel_reflector(ip=node.grpc_ip,
                                                        port=node.grpc_port)
             self.reflector_channels[node.node_id] = channel
             self.reflector_stubs[node.node_id] = stub
+        else:
+            channel = self.reflector_channels[node.node_id]
         return channel, stub
 
     def close_grpc_channel_sender(self, node):
-        channel, stub = self.sender_channels.get(node.node_id, None)
+        channel = self.sender_channels.get(node.node_id, None)
         if channel is None:
             logger.warning('gRPC channel to node %s does not exist', node.node_id)
             logger.warning('Nothing to do.')
@@ -313,7 +317,7 @@ class Controller:
         self.sender_stubs[node.node_id] = None
 
     def close_grpc_channel_reflector(self, node):
-        channel, stub = self.reflector_channels.get(node.node_id, None)
+        channel = self.reflector_channels.get(node.node_id, None)
         if channel is None:
             logger.warning('gRPC channel to node %s does not exist', node.node_id)
             logger.warning('Nothing to do.')
