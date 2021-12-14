@@ -248,7 +248,7 @@ class Controller:
          identified by the SSID.
     """
 
-    def __init__(self, debug=False, storage=None):
+    def __init__(self, debug=False, storage=None, mongodb_client=None):
         """
         Constructs all the necessary attributes for the Controller object.
 
@@ -269,7 +269,7 @@ class Controller:
         # Setup storage driver
         if storage == 'mongodb':
             from .mongodb_driver import MongoDBDriver
-            self.storage = MongoDBDriver()
+            self.storage = MongoDBDriver(mongodb_client=mongodb_client)
         elif storage is None:
             from .local_storage import LocalStorageDriver
             self.storage = LocalStorageDriver()
@@ -600,7 +600,7 @@ class Controller:
 
         # Establish a gRPC connection to the Sender
         logger.debug('Establish a gRPC connection to the STAMP Sender')
-        channel, stub = self.get_grpc_channel_sender_cached(node=node)
+        _, stub = self.get_grpc_channel_sender_cached(node=node)
 
         # Prepare the gRPC request message
         logger.debug('Preparing the gRPC request message')
@@ -1320,7 +1320,7 @@ class Controller:
         logger.debug('Starting STAMP Session on Sender')
         request = stamp_sender_pb2.StartStampSenderSessionRequest()
         request.ssid = ssid
-        _, grpc_stub_sender = self.get_grpc_channel_reflector_cached(node=stamp_session.sender)
+        _, grpc_stub_sender = self.get_grpc_channel_sender_cached(node=stamp_session.sender)
         reply = grpc_stub_sender.StartStampSession(
             request)
         if reply.status != common_pb2.StatusCode.STATUS_CODE_SUCCESS:
@@ -2354,7 +2354,8 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
 
 
 def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
-                    secure_mode=False, server=None):
+                    secure_mode=False, server=None, storage=None,
+                    mongodb_client=None):
     """
     Run a gRPC server that will accept RPCs on the provided IP address and
      port and block until the server is terminated.
@@ -2379,7 +2380,7 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
     """
 
     # Create a Controller object
-    controller = Controller()
+    controller = Controller(storage=storage, mongodb_client=mongodb_client)
 
     # If a reference to an existing gRPC server has been passed as argument,
     # attach the gRPC interface to the existing server

@@ -84,12 +84,19 @@ class LocalStorageDriver:
         Get STAMP sessions.
         """
 
+        if tenantid not in self.stamp_sessions:
+            return []
+
         if return_dict:
+            if session_ids is None:
+                return self.stamp_sessions[tenantid]
             stamp_sessions = dict()
             for ssid in session_ids:
                 stamp_sessions[ssid] = self.stamp_sessions[tenantid][ssid]
             return stamp_sessions
         else:
+            if session_ids is None:
+                return self.stamp_sessions[tenantid].values()
             stamp_sessions = list()
             for ssid in session_ids:
                 stamp_sessions.append(self.stamp_sessions[tenantid][ssid])
@@ -204,6 +211,9 @@ class LocalStorageDriver:
         """
         Get a STAMP node.
         """
+
+        if tenantid not in self.stamp_nodes:
+            return None
 
         return self.stamp_nodes[tenantid].get(node_id, None)
 

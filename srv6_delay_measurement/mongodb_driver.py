@@ -26,12 +26,21 @@ class MongoDBDriver:
     def __init__(self, host=DEFAULT_MONGODB_HOST,
                  port=DEFAULT_MONGODB_PORT,
                  username=DEFAULT_MONGODB_USERNAME,
-                 password=DEFAULT_MONGODB_PASSWORD):
+                 password=DEFAULT_MONGODB_PASSWORD,
+                 mongodb_client=None):
         self.host = host
+        if self.host is None:
+            self.host = DEFAULT_MONGODB_HOST
         self.port = port
+        if self.port is None:
+            self.port = DEFAULT_MONGODB_PORT
         self.username = username
+        if self.username is None:
+            self.username = DEFAULT_MONGODB_USERNAME
         self.password = password
-        self.client = None
+        if self.password is None:
+            self.password = DEFAULT_MONGODB_PASSWORD
+        self.client = mongodb_client
 
     # Get a reference to the MongoDB client
     def get_mongodb_session(self):
@@ -290,7 +299,7 @@ class MongoDBDriver:
                 sess.stamp_session_return_path_results.last_result_id = \
                     session['results']['return_path']['last_result_id']
 
-            sessions.append(sess)
+                sessions.append(sess)
 
             if return_dict:
                 # Build a dict representation of the STAMP sessions
@@ -516,7 +525,7 @@ class MongoDBDriver:
             'reflector_udp_port': node.reflector_udp_port,
             'is_sender': node.is_sender,
             'is_reflector': node.is_reflector,
-            'nodes_count': node.nodes_count,
+            'sessions_count': node.sessions_count,
             'tenantid': tenantid
         }
         # Register the STAMP node
