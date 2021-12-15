@@ -325,3 +325,10 @@ class LocalStorageDriver:
         self.reusable_ssid[tenantid].add(ssid)
 
         return True
+
+    def add_delay_and_update_average(self, ssid, tenantid, new_delay,
+                                     direction='direct_path'):
+        if direction == 'direct_path':
+            self.stamp_sessions[tenantid][ssid].stamp_session_direct_path_results.add_new_delay(new_delay)
+        else:
+            self.stamp_sessions[tenantid][ssid].stamp_session_return_path_results.add_new_delay(new_delay)

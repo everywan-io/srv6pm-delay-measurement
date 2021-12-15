@@ -5,7 +5,12 @@ import pymongo
 import logging
 import urllib.parse
 
-from .controller_utils import STAMPNode, STAMPSession, STAMPSessionResults
+from .controller_utils import (
+    STAMPNode,
+    STAMPSession,
+    STAMPSessionResults,
+    compute_mean_delay_welford
+)
 
 
 # Global variables
@@ -69,8 +74,8 @@ class MongoDBDriver:
         session = {
             'ssid': session.ssid,
             'description': session.description,
-            'sender_id': session.sender_id,
-            'reflector_id': session.reflector_id,
+            'sender_id': session.sender.node_id,
+            'reflector_id': session.reflector.node_id,
             'sidlist': session.sidlist,
             'return_sidlist': session.return_sidlist,
             'interval': session.interval,
@@ -246,12 +251,12 @@ class MongoDBDriver:
             sessions = list()
             for session in stamp_sessions:
                 sender = self.get_stamp_nodes(
-                    node_ids=session['sender'], tenantid=tenantid)[0]
-                if session['sender'] == session['reflector']:
+                    node_ids=[session['sender_id']], tenantid=tenantid)[0]
+                if session['sender_id'] == session['reflector_id']:
                     reflector = sender
                 else:
                     reflector = self.get_stamp_nodes(
-                        node_ids=session['reflector'], tenantid=tenantid)[0]
+                        node_ids=[session['reflector_id']], tenantid=tenantid)[0]
 
                 # Parse session
                 sess = STAMPSession(
@@ -270,16 +275,15 @@ class MongoDBDriver:
                     packet_loss_type=session['packet_loss_type'],
                     delay_measurement_mode=session['delay_measurement_mode'],
                     session_reflector_mode=session['session_reflector_mode'],
-                    store_individual_delays=session['store_individual_delays'],
                     duration=session['duration']
                 )
                 sess.is_running = session['is_running']
                 sess.stamp_session_direct_path_results = STAMPSessionResults(
                     ssid=session['ssid'],
-                    store_individual_delays=session['store_individual_delays'])
+                    store_individual_delays=True)
                 sess.stamp_session_return_path_results = STAMPSessionResults(
                     ssid=session['ssid'],
-                    store_individual_delays=session['store_individual_delays'])
+                    store_individual_delays=True)
 
                 sess.stamp_session_direct_path_results.delays = session[
                     'results']['direct_path']['delays']
@@ -335,12 +339,12 @@ class MongoDBDriver:
             session = stamp_sessions.find_one(query)
             if session is not None:
                 sender = self.get_stamp_nodes(
-                    node_ids=session['sender'], tenantid=tenantid)[0]
-                if session['sender'] == session['reflector']:
+                    node_ids=[session['sender_id']], tenantid=tenantid)[0]
+                if session['sender_id'] == session['reflector_id']:
                     reflector = sender
                 else:
                     reflector = self.get_stamp_nodes(
-                        node_ids=session['reflector'], tenantid=tenantid)[0]
+                        node_ids=[session['reflector_id']], tenantid=tenantid)[0]
 
                 # Parse session
                 sess = STAMPSession(
@@ -359,16 +363,15 @@ class MongoDBDriver:
                     packet_loss_type=session['packet_loss_type'],
                     delay_measurement_mode=session['delay_measurement_mode'],
                     session_reflector_mode=session['session_reflector_mode'],
-                    store_individual_delays=session['store_individual_delays'],
                     duration=session['duration']
                 )
                 sess.is_running = session['is_running']
                 sess.stamp_session_direct_path_results = STAMPSessionResults(
                     ssid=session['ssid'],
-                    store_individual_delays=session['store_individual_delays'])
+                    store_individual_delays=True)
                 sess.stamp_session_return_path_results = STAMPSessionResults(
                     ssid=session['ssid'],
-                    store_individual_delays=session['store_individual_delays'])
+                    store_individual_delays=True)
 
                 sess.stamp_session_direct_path_results.delays = \
                     session['results']['direct_path']['delays']
@@ -647,8 +650,9 @@ class MongoDBDriver:
             # Get the STAMP nodes collection
             stamp_nodes = db.stamp_nodes
             # Find the STAMP nodes
-            stamp_nodes = stamp_nodes.find(query)
-            for _node in stamp_nodes:
+            _stamp_nodes = stamp_nodes.find(query)
+            stamp_nodes = []
+            for _node in _stamp_nodes:
                 node = STAMPNode(
                     node_id=_node.get('node_id'),
                     grpc_ip=_node.get('grpc_ip'),
@@ -663,10 +667,11 @@ class MongoDBDriver:
                     sender_udp_port=_node.get('sender_udp_port'),
                     reflector_udp_port=_node.get('reflector_udp_port')
                 )
-                node.is_sender_initalized = _node.get('is_sender_initalized')
+                node.is_sender_initialized = _node.get('is_sender_initialized')
                 node.is_reflector_initialized = _node.get(
                     'is_reflector_initialized')
                 node.sessions_count = _node.get('sessions_count')
+                stamp_nodes.append(node)
             if return_dict:
                 # Build a dict representation of the STAMP nodes
                 res = dict()
@@ -715,7 +720,7 @@ class MongoDBDriver:
                     sender_udp_port=_node.get('sender_udp_port'),
                     reflector_udp_port=_node.get('reflector_udp_port')
                 )
-                node.is_sender_initalized = _node.get('is_sender_initalized')
+                node.is_sender_initialized = _node.get('is_sender_initialized')
                 node.is_reflector_initialized = _node.get(
                     'is_reflector_initialized')
                 node.sessions_count = _node.get('sessions_count')
@@ -964,6 +969,66 @@ class MongoDBDriver:
         # Return the counter if success,
         # None if an error occurred during the connection to the db
         return counter
+
+    def get_mean_delay(self, ssid, tenantid, direction='direct_path'):
+        # Build the query
+        query = {'ssid': ssid, 'tenantid': tenantid}
+        # Find the average delay
+        logging.debug('Retrieving average delay ssid %s', ssid)
+        average_delay = None
+        try:
+            # Get a reference to the MongoDB client
+            client = self.get_mongodb_session()
+            # Get the database
+            db = client.EveryWan
+            # Get the STAMP sessions collection
+            stamp_sessions = db.stamp_sessions
+            # Find the STAMP session
+            session = stamp_sessions.find_one(query)
+            if session is not None:
+                average_delay = session['results'][direction]['average_delay']
+            logging.debug('Average delay: %s' % average_delay)
+        except pymongo.errors.ServerSelectionTimeoutError:
+            logging.error('Cannot establish a connection to the db')
+        # Return the average delay
+        return average_delay
+
+    def get_count_packets(self, ssid, tenantid, direction='direct_path'):
+        # Build the query
+        query = {'ssid': ssid, 'tenantid': tenantid}
+        # Find the STAMP node
+        logging.debug('Retrieving count packets ssid %s', ssid)
+        count_packets = None
+        try:
+            # Get a reference to the MongoDB client
+            client = self.get_mongodb_session()
+            # Get the database
+            db = client.EveryWan
+            # Get the STAMP sessions collection
+            stamp_sessions = db.stamp_sessions
+            # Find the STAMP sessions
+            session = stamp_sessions.find_one(query)
+            if session is not None:
+                count_packets = session['results'][direction]['count_packets']
+            logging.debug('Packets count: %s' % count_packets)
+        except pymongo.errors.ServerSelectionTimeoutError:
+            logging.error('Cannot establish a connection to the db')
+        # Return the device
+        return count_packets
+
+    def add_delay_and_update_average(self, ssid, tenantid, new_delay,
+                                     direction='direct_path'):
+        self.add_delay(ssid=ssid, tenantid=tenantid, new_delay=new_delay,
+                       direction='direct_path')
+        mean_delay = self.get_mean_delay(ssid=ssid, tenantid=tenantid,
+                                         direction='direct_path')
+        count_packets = self.get_count_packets(ssid=ssid, tenantid=tenantid,
+                                               direction='direct_path')
+        new_mean_delay = compute_mean_delay_welford(
+            current_mean_delay=mean_delay,
+            count=count_packets, new_delay=new_delay)
+        self.set_mean_delay(ssid=ssid, tenantid=tenantid, mean_delay=new_mean_delay,
+                            direction=direction)
 
     def increase_sessions_count(self, node_id, tenantid):
         counter = None

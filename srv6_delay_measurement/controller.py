@@ -292,7 +292,7 @@ class Controller:
             self.sender_channels[node.node_id] = channel
             self.sender_stubs[node.node_id] = stub
         else:
-            channel = self.reflector_channels[node.node_id]
+            channel = self.sender_channels[node.node_id]
         return channel, stub
 
     def get_grpc_channel_reflector_cached(self, node):
@@ -621,7 +621,8 @@ class Controller:
             raise InitSTAMPNodeError(reply.description)
 
         # Mark the node as initialized
-        node.is_sender_initialized = True
+        self.storage.set_sender_inizialized(node_id=node.node_id,
+            tenantid=tenantid, is_initialized=True)
 
         logger.debug('Init operation completed successfully')
 
@@ -687,7 +688,8 @@ class Controller:
             raise InitSTAMPNodeError(reply.description)
 
         # Mark the node as initialized
-        node.is_reflector_initialized = True
+        self.storage.set_reflector_inizialized(node_id=node.node_id,
+            tenantid=tenantid, is_initialized=True)
 
         logger.debug('Init operation completed successfully')
 
@@ -1555,13 +1557,17 @@ class Controller:
 
             # Store the instant delays and update the mean delay of the direct
             # path using the Welford Online Algorithm
-            stamp_session.stamp_session_direct_path_results.add_new_delay(
-                new_delay=delay_direct_path)
+            self.storage.add_delay_and_update_average(ssid=ssid, tenantid=tenantid,
+                new_delay=delay_direct_path, direction='direct_path')
+            #stamp_session.stamp_session_direct_path_results.add_new_delay(
+            #    new_delay=delay_direct_path)
 
             # Store the instant delays and update the mean delay of the return
             # path using the Welford Online Algorithm
-            stamp_session.stamp_session_return_path_results.add_new_delay(
-                new_delay=delay_return_path)
+            self.storage.add_delay_and_update_average(ssid=ssid, tenantid=tenantid,
+                new_delay=delay_return_path, direction='return_path')
+            #stamp_session.stamp_session_return_path_results.add_new_delay(
+            #    new_delay=delay_return_path)
 
             logger.debug('\n*********')
             logger.debug('Delay measured for the direct path: %f',
