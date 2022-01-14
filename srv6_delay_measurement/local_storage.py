@@ -294,12 +294,10 @@ class LocalStorageDriver:
         raise NotImplementedError
 
     def increase_sessions_count(self, node_id, tenantid):
-        # TODO
-        raise NotImplementedError
+        self.stamp_nodes[tenantid][node_id].sessions_count += 1
 
     def decrease_sessions_count(self, node_id, tenantid):
-        # TODO
-        raise NotImplementedError
+        self.stamp_nodes[tenantid][node_id].sessions_count -= 1
 
     def get_new_ssid(self, tenantid):
         """

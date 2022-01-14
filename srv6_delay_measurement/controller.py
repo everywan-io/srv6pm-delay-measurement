@@ -1271,6 +1271,10 @@ class Controller:
         self.storage.create_stamp_session(
             session=stamp_session, tenantid=tenantid)
 
+        # Increase sessions counter on the Sender and Reflector
+        self.storage.increase_sessions_count(node_id=sender_id, tenantid=tenantid)
+        self.storage.increase_sessions_count(node_id=reflector_id, tenantid=tenantid)
+
         # Return the SSID allocated for the STAMP session
         logger.debug('STAMP Session created successfully, ssid: %d', ssid)
         return ssid
