@@ -1177,6 +1177,33 @@ class Controller:
         if not reflector.is_reflector_initialized:
             raise NodeNotInitializedError
 
+        # Validate Delay Measurement Mode
+        if delay_measurement_mode == 'one-way':
+            logger.error('One-Way Measurement Mode is not yet implemented')
+            raise NotImplementedError('One-Way Measurement Mode is not '
+                                      'supported')
+        if delay_measurement_mode == 'loopback':
+            logger.fatal('Loopback Measurement Mode is not yet implemented')
+            raise NotImplementedError('Loopback Measurement Mode is not '
+                                      'supported')
+            
+        # Validate all the parameters
+        if py_to_grpc(AuthenticationMode, auth_mode) is None:
+            raise CreateSTAMPSessionError(
+                msg='Unrecognized value for auth_mode')
+        if py_to_grpc(TimestampFormat, timestamp_format) is None:
+            raise CreateSTAMPSessionError(
+                msg='Unrecognized value for timestamp_format')
+        if py_to_grpc(PacketLossType, packet_loss_type) is None:
+            raise CreateSTAMPSessionError(
+                msg='Unrecognized value for packet_loss_type')
+        if py_to_grpc(DelayMeasurementMode, delay_measurement_mode) is None:
+            raise CreateSTAMPSessionError(
+                msg='Unrecognized value for delay_measurement_mode')
+        if py_to_grpc(SessionReflectorMode, session_reflector_mode) is None:
+            raise CreateSTAMPSessionError(
+                msg='Unrecognized value for session_reflector_mode')
+
         # Pick a SSID from the reusable SSIDs pool
         # If the pool is empty, we take a new SSID
         ssid = self.storage.get_new_ssid(tenantid=tenantid)
@@ -2111,6 +2138,15 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
             return controller_pb2.CreateStampSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
                 description='Node is not a STAMP Reflector: {reflector_id}')
+        except NotImplementedError as err:
+            # Failed to create a STAMP Session, return an error
+            logging.error('Cannot complete the requested operation: '
+                          'Cannot create STAMP Session: %s', str(err))
+            # Return an error
+            return controller_pb2.CreateStampSessionReply(
+                status=common_pb2.StatusCode.STATUS_CODE_INTERNAL_ERROR,
+                description='Cannot create STAMP Session: {err}'
+                            .format(err=str(err)))
 
         # Return with success status code
         logger.debug('CreateStampSession RPC completed')
