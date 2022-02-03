@@ -1188,19 +1188,26 @@ class Controller:
                                       'supported')
             
         # Validate all the parameters
-        if py_to_grpc(AuthenticationMode, auth_mode) is None:
+        if auth_mode is not None and \
+                py_to_grpc(AuthenticationMode, auth_mode) is None:
             raise CreateSTAMPSessionError(
                 msg='Unrecognized value for auth_mode')
-        if py_to_grpc(TimestampFormat, timestamp_format) is None:
+        if timestamp_format is not None and \
+                py_to_grpc(TimestampFormat, timestamp_format) is None:
             raise CreateSTAMPSessionError(
                 msg='Unrecognized value for timestamp_format')
-        if py_to_grpc(PacketLossType, packet_loss_type) is None:
+        if packet_loss_type is not None and \
+                py_to_grpc(PacketLossType, packet_loss_type) is None:
             raise CreateSTAMPSessionError(
                 msg='Unrecognized value for packet_loss_type')
-        if py_to_grpc(DelayMeasurementMode, delay_measurement_mode) is None:
+        if delay_measurement_mode is not None and \
+                py_to_grpc(DelayMeasurementMode,
+                           delay_measurement_mode) is None:
             raise CreateSTAMPSessionError(
                 msg='Unrecognized value for delay_measurement_mode')
-        if py_to_grpc(SessionReflectorMode, session_reflector_mode) is None:
+        if session_reflector_mode is not None and \
+                py_to_grpc(SessionReflectorMode,
+                           session_reflector_mode) is None:
             raise CreateSTAMPSessionError(
                 msg='Unrecognized value for session_reflector_mode')
 
@@ -2319,14 +2326,14 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
         res.return_path_average_delay = return_path_results.mean_delay
         for delay in direct_path_results.delays:
             direct_path_res = res.direct_path_results.add()
-            direct_path_res.id = delay.id
-            direct_path_res.value = delay.value
-            direct_path_res.timestamp = delay.timestamp
+            direct_path_res.id = delay['id']
+            direct_path_res.value = delay['value']
+            direct_path_res.timestamp = delay['timestamp']
         for delay in return_path_results.delays:
             return_path_res = res.return_path_results.add()
-            return_path_res.id = delay.id
-            return_path_res.value = delay.value
-            return_path_res.timestamp = delay.timestamp
+            return_path_res.id = delay['id']
+            return_path_res.value = delay['value']
+            return_path_res.timestamp = delay['timestamp']
 
         # Set status code and return
         logger.debug('GetStampResults RPC completed')

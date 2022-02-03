@@ -3,6 +3,7 @@
 # General imports
 import pymongo
 import logging
+import time
 import urllib.parse
 
 from .controller_utils import (
@@ -896,15 +897,6 @@ class MongoDBDriver:
                        direction='direct_path'):
         # Build the query
         query = {'ssid': ssid, 'tenantid': tenantid}
-        # Build the update
-        update = {'$set': {
-            'results': {
-                direction: {
-                    'average-delay': mean_delay
-                }
-            }
-        }
-        }
         success = None
         try:
             # Get a reference to the MongoDB client
@@ -917,6 +909,17 @@ class MongoDBDriver:
             logging.debug('Update STAMP Session %s mean delay, direction %s'
                           % (ssid, direction))
             logging.debug('New mean delay: %s' % mean_delay)
+            # Get the device
+            stamp_session = stamp_sessions.find_one(query)
+            if stamp_session is None:
+                logging.error('Cannot retrieve STAMP session')
+            results = stamp_session['results']
+            results[direction]['average_delay'] = mean_delay
+            # Build the update
+            update = {'$set': {
+                'results': results
+            }
+            }
             # Get the device
             success = stamp_sessions.update_one(
                 query, update).matched_count == 1
@@ -944,14 +947,23 @@ class MongoDBDriver:
             # Build query
             query = {'ssid': ssid,
                      'tenantid': tenantid}
+            # Find the STAMP sessions
+            stamp_session = stamp_sessions.find_one(query)
+            # Get last result ID
+            last_result_id = stamp_session['results'][direction]['last_result_id']
+            # Increase last result ID
+            last_result_id += 1
             # Build the update
             update = {'$push': {
                 'results.' + direction + '.delays': {
-                    'id': new_delay.id,
-                    'value': new_delay.value,
-                    'timestamp': new_delay.timestamp}}
+                    'id': last_result_id,
+                    'value': new_delay,
+                    'timestamp': time.time()}}
             }
             # If the counter does not exist, create it
+            stamp_sessions.update_one(query, update)
+            # Update last result ID
+            update = {'$inc': {'results.' + direction + '.last_result_id': 1}}
             stamp_sessions.update_one(query, update)
             # Build the query
             query = {'ssid': ssid,
@@ -1019,11 +1031,11 @@ class MongoDBDriver:
     def add_delay_and_update_average(self, ssid, tenantid, new_delay,
                                      direction='direct_path'):
         self.add_delay(ssid=ssid, tenantid=tenantid, new_delay=new_delay,
-                       direction='direct_path')
+                       direction=direction)
         mean_delay = self.get_mean_delay(ssid=ssid, tenantid=tenantid,
-                                         direction='direct_path')
+                                         direction=direction)
         count_packets = self.get_count_packets(ssid=ssid, tenantid=tenantid,
-                                               direction='direct_path')
+                                               direction=direction)
         new_mean_delay = compute_mean_delay_welford(
             current_mean_delay=mean_delay,
             count=count_packets, new_delay=new_delay)
@@ -1134,6 +1146,11 @@ class MongoDBDriver:
                                 'SSID %s is reserved. Getting new SSID' % ssid)
                     else:
                         logging.error('Error in get_new_tableid')
+                    update = {
+                        '$set': {'counters.ssid.last_ssid': ssid}}
+                    if tenants.update_one(query, update).modified_count != 1:
+                        logging.error(
+                            'Error while updating last_ssid')
         except pymongo.errors.ServerSelectionTimeoutError:
             logging.error('Cannot establish a connection to the db')
         # Return the SSID

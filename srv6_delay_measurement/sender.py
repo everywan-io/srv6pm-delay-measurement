@@ -1030,14 +1030,14 @@ class STAMPSessionSenderServicer(
             # To create the STAMP Session, the Reflector node needs to be
             # initialized
             logging.error('Sender node is not initialized')
-            return stamp_sender_pb2.CreateStampSessionReply(
+            return stamp_sender_pb2.CreateStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
                 description='Sender node is not initialized')
         except STAMPSessionExistsError:
             # SSID is already used, return an error
             logging.error('A session with SSID %d already exists',
                           request.ssid)
-            return stamp_sender_pb2.CreateStampSessionReply(
+            return stamp_sender_pb2.CreateStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_EXISTS,
                 description='A session with SSID {ssid} already exists'
                             .format(ssid=request.ssid))
@@ -1045,7 +1045,7 @@ class STAMPSessionSenderServicer(
             # SSID is outside the valid range, return an error
             logging.error('SSID is outside the valid range [{%d}, {%d}]',
                           MIN_SSID, MAX_SSID)
-            return stamp_sender_pb2.CreateStampSessionReply(
+            return stamp_sender_pb2.CreateStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
                 description='SSID is outside the valid range '
                             '[{min_ssid}, {max_ssid}]'
