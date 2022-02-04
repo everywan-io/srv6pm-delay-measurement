@@ -167,6 +167,13 @@ enum StatusCode {
   // occurred
   STATUS_CODE_INTERNAL_ERROR = 10;
 
+  // STATUS_CODE_ALREADY_REGISTERED is used to indicate that the node has been
+  // already registered
+  STATUS_CODE_ALREADY_REGISTERED = 11;
+
+  // STATUS_CODE_NODE_NOT_FOUND is used to indicate that the node does not exist
+  STATUS_CODE_NODE_NOT_FOUND = 12;
+
 }
 
 

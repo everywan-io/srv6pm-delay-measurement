@@ -37,6 +37,10 @@ import socket
 
 import grpc
 
+import sys
+from pkg_resources import resource_filename
+sys.path.append(resource_filename(__name__, 'commons/protos/srv6pm/gen_py/'))
+
 import common_pb2
 import stamp_reflector_pb2
 import stamp_reflector_pb2_grpc
@@ -57,7 +61,7 @@ from srv6_delay_measurement.exceptions import (
 from scapy.layers.inet6 import L3RawSocket6
 from scapy.sendrecv import AsyncSniffer
 
-from utils import (
+from .utils import (
     MAX_SSID,
     MIN_SSID,
     NEXT_HEADER_IPV6_FIELD,
@@ -70,8 +74,8 @@ from utils import (
     py_to_grpc
 )
 
-from libs import libstamp
-from libs.libstamp import (
+from .libs import libstamp
+from .libs.libstamp import (
     AuthenticationMode,
     TimestampFormat,
     SessionReflectorMode
@@ -718,6 +722,7 @@ class STAMPSessionReflector:
         sniffer = AsyncSniffer(
             iface=self.stamp_interfaces,
             filter=stamp_filter,
+            store=False,
             prn=self.stamp_test_packet_received)
         return sniffer
 
@@ -856,14 +861,14 @@ class STAMPSessionReflectorServicer(
             # To create the STAMP Session, the Reflector node needs to be
             # initialized
             logger.error('Reflector node is not initialized')
-            return stamp_reflector_pb2.CreateStampSessionReply(
+            return stamp_reflector_pb2.CreateStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
                 description='Reflector node is not initialized')
         except STAMPSessionRunningError:
             # SSID is already used, return an error
             logger.error('A session with SSID %d already exists',
                          request.ssid)
-            return stamp_reflector_pb2.CreateStampSessionReply(
+            return stamp_reflector_pb2.CreateStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_EXISTS,
                 description='A session with SSID {ssid} already exists'
                             .format(ssid=request.ssid))
@@ -871,7 +876,7 @@ class STAMPSessionReflectorServicer(
             # SSID is outside the valid range, return an error
             logging.error('SSID is outside the valid range [{%d}, {%d}]',
                           MIN_SSID, MAX_SSID)
-            return stamp_reflector_pb2.CreateStampSessionReply(
+            return stamp_reflector_pb2.CreateStampReflectorSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
                 description='SSID is outside the valid range '
                             '[{min_ssid}, {max_ssid}]'
@@ -1017,7 +1022,7 @@ class STAMPSessionReflectorServicer(
 
 
 def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
-                    secure_mode=False):
+                    secure_mode=False, server=None):
     """
     Run a gRPC server that will accept RPCs on the provided IP address and
      port and block until the server is terminated.
@@ -1032,6 +1037,8 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
          (default is 12345).
     secure_mode : bool, optional
         Whether to enable or not gRPC secure mode (default is False).
+    server : optional
+        An existing gRPC server. If None, a new gRPC server is created.
 
     Returns
     -------
@@ -1040,6 +1047,14 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
 
     # Create a STAMP Session Reflector object
     stamp_session_reflector = STAMPSessionReflector()
+
+    # If a reference to an existing gRPC server has been passed as argument,
+    # attach the gRPC interface to the existing server
+    if server is not None:
+        (stamp_reflector_pb2_grpc
+         .add_STAMPSessionReflectorServiceServicer_to_server(
+            STAMPSessionReflectorServicer(stamp_session_reflector), server))
+        return stamp_session_reflector
 
     # Create the gRPC server
     logger.debug('Creating the gRPC server')

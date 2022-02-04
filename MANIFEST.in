@@ -1,0 +1,1 @@
+recursive-include srv6_delay_measurement/commons/protos/srv6pm/gen_py *.py

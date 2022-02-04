@@ -185,6 +185,7 @@ class InitSTAMPNodeError(Exception):
     """
 
     def __init__(self, msg=''):
+        self.msg = msg
         super().__init__(msg)
 
 
@@ -204,6 +205,7 @@ class ResetSTAMPNodeError(Exception):
     """
 
     def __init__(self, msg=''):
+        self.msg = msg
         super().__init__(msg)
 
 
@@ -223,6 +225,7 @@ class CreateSTAMPSessionError(Exception):
     """
 
     def __init__(self, msg=''):
+        self.msg = msg
         super().__init__(msg)
 
 
@@ -242,6 +245,7 @@ class StartSTAMPSessionError(Exception):
     """
 
     def __init__(self, msg=''):
+        self.msg = msg
         super().__init__(msg)
 
 
@@ -261,6 +265,7 @@ class StopSTAMPSessionError(Exception):
     """
 
     def __init__(self, msg=''):
+        self.msg = msg
         super().__init__(msg)
 
 
@@ -471,3 +476,20 @@ class SSIDOutOfRangeError(Exception):
             if min_ssid is not None and max_ssid is not None:
                 self.msg += f': [{min_ssid}, {max_ssid}]'
         super().__init__(self.msg)
+        super().__init__(self.msg)
+
+
+class STAMPSessionsExistError(Exception):
+    """Raised when attempting to unregister a node and STAMP sessions exist.
+
+    Parameters
+    ----------
+    ssid : int
+        16-bit STAMP Session Identifier (SSID).
+
+    Attributes
+    ----------
+    msg : str
+        Human readable string describing the exception.
+
+    """

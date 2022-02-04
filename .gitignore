@@ -2,4 +2,7 @@
 .venv/
 .vscode/
 __pycache__/
-srv6_delay_measurement/commons/protos/srv6pm/gen-py/
+srv6_delay_measurement/commons/protos/srv6pm/gen_py/
+build/
+dist/
+*.egg-info

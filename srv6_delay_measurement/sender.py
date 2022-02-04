@@ -39,6 +39,10 @@ import time
 
 import grpc
 
+import sys
+from pkg_resources import resource_filename
+sys.path.append(resource_filename(__name__, 'commons/protos/srv6pm/gen_py/'))
+
 import common_pb2
 import stamp_sender_pb2
 import stamp_sender_pb2_grpc
@@ -59,7 +63,7 @@ from srv6_delay_measurement.exceptions import (
 from scapy.layers.inet6 import L3RawSocket6
 from scapy.sendrecv import AsyncSniffer
 
-from utils import (
+from .utils import (
     MAX_SEQUENCE_NUMBER,
     MAX_SSID,
     MIN_SSID,
@@ -73,8 +77,8 @@ from utils import (
     py_to_grpc
 )
 
-from libs import libstamp
-from libs.libstamp import (
+from .libs import libstamp
+from .libs.libstamp import (
     AuthenticationMode,
     TimestampFormat,
     PacketLossType,
@@ -260,6 +264,7 @@ class STAMPSessionSender:
         sniffer = AsyncSniffer(
             iface=self.stamp_interfaces,
             filter=stamp_filter,
+            store=False,
             prn=self.stamp_reply_packet_received)
         return sniffer
 
@@ -637,22 +642,11 @@ class STAMPSessionSender:
             timestamp_format=timestamp_format,
             packet_loss_type=packet_loss_type,
             delay_measurement_mode=delay_measurement_mode,
+            interval=interval,
             stop_flag=Event(),  # To support stopping the sending thread
             stamp_source_ipv6_address=stamp_source_ipv6_address
         )
         logger.info('STAMP Session initialized: SSID %d', ssid)
-
-        # Create a new thread to handle the asynchronous periodic sending of
-        # STAMP Test packets; the new thread is not started here, it is
-        # started by the StartStampSession RPC
-        logger.info('Creating sending thread')
-        stamp_session.sending_thread = Thread(
-            target=self.send_stamp_packet_periodic,
-            kwargs={
-                'ssid': ssid,
-                'interval': interval
-            }
-        )
 
         # Add the STAMP session to the STAMP sessions dict
         self.stamp_sessions[ssid] = stamp_session
@@ -710,8 +704,20 @@ class STAMPSessionSender:
                           'already running', ssid)
             raise STAMPSessionNotRunningError(ssid=ssid)
 
+        # Create a new thread to handle the asynchronous periodic sending of
+        # STAMP Test packets
+        logger.info('Creating sending thread')
+        session.sending_thread = Thread(
+            target=self.send_stamp_packet_periodic,
+            kwargs={
+                'ssid': ssid,
+                'interval': session.interval
+            }
+        )
+
         # Start the sending thread
         logger.info('Starting sending thread')
+        session.stop_flag.clear()
         session.sending_thread.start()
 
         # Set the flag "started"
@@ -1024,14 +1030,14 @@ class STAMPSessionSenderServicer(
             # To create the STAMP Session, the Reflector node needs to be
             # initialized
             logging.error('Sender node is not initialized')
-            return stamp_sender_pb2.CreateStampSessionReply(
+            return stamp_sender_pb2.CreateStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_NOT_INITIALIZED,
                 description='Sender node is not initialized')
         except STAMPSessionExistsError:
             # SSID is already used, return an error
             logging.error('A session with SSID %d already exists',
                           request.ssid)
-            return stamp_sender_pb2.CreateStampSessionReply(
+            return stamp_sender_pb2.CreateStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_SESSION_EXISTS,
                 description='A session with SSID {ssid} already exists'
                             .format(ssid=request.ssid))
@@ -1039,7 +1045,7 @@ class STAMPSessionSenderServicer(
             # SSID is outside the valid range, return an error
             logging.error('SSID is outside the valid range [{%d}, {%d}]',
                           MIN_SSID, MAX_SSID)
-            return stamp_sender_pb2.CreateStampSessionReply(
+            return stamp_sender_pb2.CreateStampSenderSessionReply(
                 status=common_pb2.StatusCode.STATUS_CODE_INVALID_ARGUMENT,
                 description='SSID is outside the valid range '
                             '[{min_ssid}, {max_ssid}]'
@@ -1211,7 +1217,7 @@ class STAMPSessionSenderServicer(
 
 
 def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
-                    secure_mode=False):
+                    secure_mode=False, server=None):
     """
     Run a gRPC server that will accept RPCs on the provided IP address and
      port and block until the server is terminated.
@@ -1226,6 +1232,8 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
          (default is 12345).
     secure_mode : bool, optional
         Whether to enable or not gRPC secure mode (default is False).
+    server : optional
+        An existing gRPC server. If None, a new gRPC server is created.
 
     Returns
     -------
@@ -1234,6 +1242,13 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
 
     # Create a STAMP Session Sender object
     stamp_session_sender = STAMPSessionSender()
+
+    # If a reference to an existing gRPC server has been passed as argument,
+    # attach the gRPC interface to the existing server
+    if server is not None:
+        stamp_sender_pb2_grpc.add_STAMPSessionSenderServiceServicer_to_server(
+            STAMPSessionSenderServicer(stamp_session_sender), server)
+        return stamp_session_sender
 
     # Create the gRPC server
     logger.debug('Creating the gRPC server')

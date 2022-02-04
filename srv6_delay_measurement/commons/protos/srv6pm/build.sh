@@ -2,7 +2,7 @@
 
 SERVICE=.
 
-DESTDIR='gen-py'
+DESTDIR='gen_py'
 mkdir -p $DESTDIR
 python3 -m grpc_tools.protoc \
     --proto_path=$SERVICE/ \
