@@ -497,11 +497,12 @@ class STAMPSessionSender:
             raise ResetSTAMPNodeError('Reset failed: STAMP Sessions exist')
 
         # Stop and destroy the receive thread
-        logger.info('Stopping receive thread')
-        logger.info('Stopping sniffing...')
-        self.stamp_packet_receiver.stop()
-        logger.info('Destroying receive thread')
-        self.stamp_packet_receiver = None
+        if self.stamp_packet_receiver is not None:
+            logger.info('Stopping receive thread')
+            logger.info('Stopping sniffing...')
+            self.stamp_packet_receiver.stop()
+            logger.info('Destroying receive thread')
+            self.stamp_packet_receiver = None
 
         # Remove ip6tables rule for STAMP packets
         rule_exists = os.system('ip6tables -t raw -C PREROUTING -p udp '
