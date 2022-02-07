@@ -122,8 +122,8 @@ class NorthboundInterface:
         elif addr_family == AF_INET:
             server_address = f'ipv4:{address}:{port}'
         else:
-            logging.error('Invalid address: %s' % address)
-            return
+            # Address is a hostname
+            server_address = f'{address}:{port}'
         if self.channel is None:
             # If secure we need to establish a channel with the secure endpoint
             if secure:
