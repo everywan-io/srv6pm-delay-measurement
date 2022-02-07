@@ -526,8 +526,8 @@ class STAMPSessionSender:
             self.auxiliary_socket = None
 
         # Close the Scapy socket
-        logger.info('Closing the socket')
         if self.sender_socket is not None:
+            logger.info('Closing the socket')
             self.sender_socket.close()
             self.sender_socket = None
 

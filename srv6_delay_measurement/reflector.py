@@ -298,14 +298,16 @@ class STAMPSessionReflector:
         self.reflector_udp_port = None
 
         # Close the auxiliary UDP socket
-        logger.info('Closing the auxiliary UDP socket')
-        self.auxiliary_socket.close()
-        self.auxiliary_socket = None
+        if self.auxiliary_socket is not None:
+            logger.info('Closing the auxiliary UDP socket')
+            self.auxiliary_socket.close()
+            self.auxiliary_socket = None
 
         # Close the Scapy socket
-        logger.info('Closing the socket')
-        self.reflector_socket.close()
-        self.reflector_socket = None
+        if self.reflector_socket is not None:
+            logger.info('Closing the socket')
+            self.reflector_socket.close()
+            self.reflector_socket = None
 
         # Clear interface information
         logger.info('Clearing the interface information')
