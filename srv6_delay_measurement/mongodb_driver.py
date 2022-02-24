@@ -553,6 +553,45 @@ class MongoDBDriver:
         # Return
         return success
 
+    def update_stamp_node(self, node_id, tenantid, grpc_ip=None, grpc_port=None):
+        """
+        Update an existing STAMP Node.
+        """
+
+        # Build the query for the update operation
+        query = {
+            'node_id': node_id,
+            'tenantid': tenantid
+        }
+        # Build the update
+        update = {
+            '$set': {}
+        }
+        if grpc_ip is not None:
+            update['$set']['grpc_ip'] = grpc_ip
+        if grpc_port is not None:
+            update['$set']['grpc_port'] = grpc_port
+        # Update the STAMP node
+        logging.debug('Updating STAMP Node on DB: %s' % node_id)
+        success = None
+        try:
+            # Get a reference to the MongoDB client
+            client = self.get_mongodb_session()
+            # Get the database
+            db = client.EveryWan
+            # Get the STAMP nodes collection
+            stamp_nodes = db.stamp_nodes
+            # Update the STAMP node
+            success = stamp_nodes.update_one(query, update).matched_count == 1
+            if success:
+                logging.debug('STAMP Node %s updated registered', node_id)
+            else:
+                logging.error('Cannot update the STAMP Node')
+        except pymongo.errors.ServerSelectionTimeoutError:
+            logging.error('Cannot establish a connection to the db')
+        # Return
+        return success
+
     # Remove a STAMP Node
 
     def remove_stamp_node(self, node_id, tenantid):

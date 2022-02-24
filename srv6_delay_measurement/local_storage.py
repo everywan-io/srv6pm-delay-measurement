@@ -163,6 +163,12 @@ class LocalStorageDriver:
 
         return True
 
+    def update_stamp_node(self, node, tenantid, grpc_ip=None, grpc_port=None):
+        """
+        Update an existing STAMP Node.
+        """
+        raise NotImplementedError
+
     def remove_stamp_node(self, node_id, tenantid):
         """
         Remove a STAMP Node.
