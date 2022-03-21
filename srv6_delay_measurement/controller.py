@@ -512,9 +512,9 @@ class Controller:
         # Initialize the node, eventually
         if initialize:
             if is_sender:
-                self.init_sender(node_id)
+                self.init_sender(node_id=node_id, tenantid=tenantid)
             if is_reflector:
-                self.init_reflector(node_id)
+                self.init_reflector(node_id=node_id, tenantid=tenantid)
 
     def remove_stamp_node(self, node_id, tenantid='1'):
         """
@@ -728,10 +728,10 @@ class Controller:
         logger.debug('Detecting node type')
         if node.is_stamp_sender():
             logger.debug('Node is a STAMP Sender')
-            self.init_sender(node_id)
+            self.init_sender(node_id=node_id, tenantid=tenantid)
         if node.is_stamp_reflector():
             logger.debug('Node is a STAMP Reflector')
-            self.init_reflector(node_id)
+            self.init_reflector(node_id=node_id, tenantid=tenantid)
 
     def reset_stamp_sender(self, node_id, tenantid='1'):
         """
