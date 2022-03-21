@@ -106,7 +106,7 @@ class STAMPSessionSender:
     Sender.
     """
 
-    def __init__(self):
+    def __init__(self, stop_event=None):
         # Initialize super class STAMPSessionSenderService
         super().__init__()
         # A dict containing informations about the running STAMP Sessions
@@ -129,6 +129,21 @@ class STAMPSessionSender:
         # stamp_source_ipv6_address attribute in the STAMPSession
         # If it is None, the loopback IPv6 address will be used.
         self.stamp_source_ipv6_address = None
+        # Stop event. If set, something has requested the termination of
+        # the device and we need to gracefully shutdown this script
+        self.stop_event = stop_event
+        # Start a thread to listen for stop events
+        if stop_event is not None:
+            Thread(target=self.shutdown_sender).start()
+
+    def shutdown_sender(self):
+        # Wait until a termination signal is received
+        self.stop_event.wait()
+        # Received termination signal
+        logging.info(
+            'Received shutdown command. Gracefully terminating sender.'
+        )
+        self.reset()
 
     def is_session_valid(self, ssid):
         """
@@ -1218,7 +1233,7 @@ class STAMPSessionSenderServicer(
 
 
 def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
-                    secure_mode=False, server=None):
+                    secure_mode=False, server=None, stop_event=None):
     """
     Run a gRPC server that will accept RPCs on the provided IP address and
      port and block until the server is terminated.
@@ -1235,6 +1250,9 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
         Whether to enable or not gRPC secure mode (default is False).
     server : optional
         An existing gRPC server. If None, a new gRPC server is created.
+    stop_event : threading.event, optional
+        Stop event. If set, something has requested the termination of
+        the device and we need to gracefully shutdown the reflector.
 
     Returns
     -------
@@ -1242,7 +1260,7 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
     """
 
     # Create a STAMP Session Sender object
-    stamp_session_sender = STAMPSessionSender()
+    stamp_session_sender = STAMPSessionSender(stop_event)
 
     # If a reference to an existing gRPC server has been passed as argument,
     # attach the gRPC interface to the existing server
