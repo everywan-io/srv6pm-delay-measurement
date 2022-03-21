@@ -29,6 +29,7 @@ RFC 8762.
 """
 
 from concurrent import futures
+from threading import Thread
 import argparse
 import logging
 import netifaces
@@ -102,7 +103,7 @@ class STAMPSessionReflector:
     Reflector.
     """
 
-    def __init__(self):
+    def __init__(self, stop_event=None):
         # A dict containing information about the running STAMP Sessions
         self.stamp_sessions = {}
         # Reflector UDP port
@@ -123,6 +124,21 @@ class STAMPSessionReflector:
         # stamp_source_ipv6_address attribute in the STAMPSession
         # If it is None, the loopback IPv6 address will be used.
         self.stamp_source_ipv6_address = None
+        # Stop event. If set, something has requested the termination of
+        # the device and we need to gracefully shutdown this script
+        self.stop_event = stop_event
+        # Start a thread to listen for stop events
+        if stop_event is not None:
+            Thread(target=self.shutdown_reflector).start()
+
+    def shutdown_reflector(self):
+        # Wait until a termination signal is received
+        self.stop_event.wait()
+        # Received termination signal
+        logging.info(
+            'Received shutdown command. Gracefully terminating reflector.'
+        )
+        self.reset()
 
     def init(self, reflector_udp_port, interfaces=None,
              stamp_source_ipv6_address=None):
@@ -1024,7 +1040,7 @@ class STAMPSessionReflectorServicer(
 
 
 def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
-                    secure_mode=False, server=None):
+                    secure_mode=False, server=None, stop_event=None):
     """
     Run a gRPC server that will accept RPCs on the provided IP address and
      port and block until the server is terminated.
@@ -1041,6 +1057,9 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
         Whether to enable or not gRPC secure mode (default is False).
     server : optional
         An existing gRPC server. If None, a new gRPC server is created.
+    stop_event : threading.event, optional
+        Stop event. If set, something has requested the termination of
+        the device and we need to gracefully shutdown the reflector.
 
     Returns
     -------
@@ -1048,7 +1067,7 @@ def run_grpc_server(grpc_ip: str = None, grpc_port: int = DEFAULT_GRPC_PORT,
     """
 
     # Create a STAMP Session Reflector object
-    stamp_session_reflector = STAMPSessionReflector()
+    stamp_session_reflector = STAMPSessionReflector(stop_event)
 
     # If a reference to an existing gRPC server has been passed as argument,
     # attach the gRPC interface to the existing server
