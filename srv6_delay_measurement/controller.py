@@ -550,10 +550,10 @@ class Controller:
             raise STAMPSessionsExistError
 
         if node.is_sender_initialized:
-            self.reset_stamp_sender(node_id=node_id)
+            self.reset_stamp_sender(node_id=node_id, tenantid=tenantid)
 
         if node.is_reflector_initialized:
-            self.reset_stamp_reflector(node_id=node_id)
+            self.reset_stamp_reflector(node_id=node_id, tenantid=tenantid)
 
         # Remove the STAMP node
         self.storage.remove_stamp_node(node_id=node_id, tenantid=tenantid)
@@ -882,10 +882,10 @@ class Controller:
         logger.debug('Detecting node type')
         if node.is_stamp_sender():
             logger.debug('Node is a STAMP Sender')
-            self.reset_stamp_sender(node_id)
+            self.reset_stamp_sender(node_id=node_id, tenantid=tenantid)
         if node.is_stamp_reflector():
             logger.debug('Node is a STAMP Reflector')
-            self.reset_stamp_reflector(node_id)
+            self.reset_stamp_reflector(node_id=node_id, tenantid=tenantid)
 
     def _create_stamp_sender_session(self, ssid, sender, reflector,
                                      sidlist=[], interval=10, auth_mode=None,
