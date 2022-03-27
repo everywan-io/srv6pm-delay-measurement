@@ -481,6 +481,9 @@ class STAMPSession:
         # IP address to be used as source IPv6 address of the STAMP packets
         self.stamp_source_ipv6_address = stamp_source_ipv6_address
 
+        self.packet_template = None
+        self.pseudo_header = None
+
     def set_started(self):
         """
         Mark the STAMP Session as running.
