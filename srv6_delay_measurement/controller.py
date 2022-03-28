@@ -1687,7 +1687,7 @@ class Controller:
 
         # Get the results
         direct_path_results, return_path_results = \
-            self.get_stamp_results(self, ssid, fetch_results_from_stamp, tenantid='1')
+            self.get_stamp_results(self, ssid, fetch_results_from_stamp, tenantid)
 
         # Return the mean delay
         return (direct_path_results.mean_delay, return_path_results.mean_delay)
