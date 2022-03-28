@@ -27,13 +27,13 @@
 STAMP Test library.
 """
 
-from controller import Controller
+from srv6_delay_measurement.controller import Controller
 import time
 import threading
 import logging
 import sys
 
-from utils import AuthenticationMode, DelayMeasurementMode, PacketLossType, SessionReflectorMode, TimestampFormat
+from srv6_delay_measurement.utils import AuthenticationMode, DelayMeasurementMode, PacketLossType, SessionReflectorMode, TimestampFormat
 sys.path.append('.')   # TODO sistemare meglio
 
 
