@@ -499,7 +499,7 @@ def generate_stamp_test_packet(
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
     srv6_header.addresses = sidlist[::-1]
-    srv6_header.segleft = len(sidlist)
+    srv6_header.segleft = len(sidlist) - 1
     srv6_header.lastentry = len(sidlist) - 1
 
     # Build UDP header
@@ -559,7 +559,7 @@ def generate_stamp_test_reply_template(
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
     srv6_header.addresses = sidlist[::-1]
-    srv6_header.segleft = len(sidlist)
+    srv6_header.segleft = len(sidlist) - 1
     srv6_header.lastentry = len(sidlist) - 1
 
     print('sid list', srv6_header.addresses)
@@ -796,7 +796,7 @@ def generate_stamp_reply_packet(
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
     srv6_header.addresses = sidlist[::-1]
-    srv6_header.segleft = len(sidlist)
+    srv6_header.segleft = len(sidlist) - 1
     srv6_header.lastentry = len(sidlist) - 1
 
     # Build UDP header
