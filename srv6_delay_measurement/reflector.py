@@ -805,7 +805,7 @@ class STAMPSessionReflector:
 
         #stamp_reply_payload_offset = ipv6_offset + 8 + len(stamp_session.return_sidlist)
 
-        ssid = struct.unpack('H', packet[stamp_offset + libstamp.core.SSID_OFFSET : stamp_offset + libstamp.core.SSID_OFFSET + libstamp.core.SSID_LENGTH])[0]
+        ssid = struct.unpack('!H', packet[stamp_offset + libstamp.core.SSID_OFFSET : stamp_offset + libstamp.core.SSID_OFFSET + libstamp.core.SSID_LENGTH])[0]
 
         # Get the STAMP Session by SSID
         stamp_session = self.stamp_sessions.get(ssid, None)

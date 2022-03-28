@@ -676,16 +676,17 @@ def generate_stamp_test_reply_packet_from_template(
     #print(stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH/2)
 
     # Copy the current timestamp to the STAMP Test Reply packet
-    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET : stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2)] = struct.pack('I', seconds)
-    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH] = struct.pack('I', fraction)
+    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET : stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2)] = struct.pack('!I', seconds)
+    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH] = struct.pack('!I', fraction)
 
-    stamp_reply[stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET : stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + int(RECEIVE_TIMESTAMP_LENGTH/2)] = struct.pack('I', seconds)
-    stamp_reply[stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + int(RECEIVE_TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + RECEIVE_TIMESTAMP_LENGTH] = struct.pack('I', fraction)
+    stamp_reply[stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET : stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + int(RECEIVE_TIMESTAMP_LENGTH/2)] = struct.pack('!I', seconds)
+    stamp_reply[stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + int(RECEIVE_TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + RECEIVE_TIMESTAMP_LENGTH] = struct.pack('!I', fraction)
 
     # Copy the sequence number to the STAMP Test Reply packet
     if sequence_number is None:
-        sequence_number = 0  #TODO fix
-        sequence_number = struct.pack("!I", sequence_number)
+        sequence_number = stamp_test_packet[stamp_test_payload_offset + SEQUENCE_NUMBER_OFFSET: stamp_test_payload_offset + SEQUENCE_NUMBER_OFFSET + SEQUENCE_NUMBER_LENGTH]
+    else:
+        sequence_number = struct.pack('!I', sequence_number)
     stamp_reply[stamp_reply_payload_offset + SEQUENCE_NUMBER_OFFSET : stamp_reply_payload_offset + SEQUENCE_NUMBER_OFFSET + SEQUENCE_NUMBER_LENGTH] = sequence_number
 
     # Dst UDP port
