@@ -155,6 +155,8 @@ UDP_CHECKSUM_OFFSET = -2
 UDP_CHECKSUM_LENGTH = 2
 DST_UDP_PORT_OFFSET = -6
 DST_UDP_PORT_LENGTH = 2
+SRC_UDP_PORT_OFFSET = -8
+SRC_UDP_PORT_LENGTH = 2
 
 STAMP_PACKET_LENGTH = 44
 
@@ -586,11 +588,17 @@ def generate_stamp_test_reply_pseudo_header(
         dst_ip
     ):
 
+    print('pseudo header')
+    print(src_ip)
+    print(dst_ip)
+    print(STAMP_PACKET_LENGTH)
+
     pseudo_hdr = struct.pack(
         "!16s16sI3xB",
         inet_pton(socket.AF_INET6, src_ip),
+        #inet_pton(socket.AF_INET6, '12:2::1'),
         inet_pton(socket.AF_INET6, dst_ip),
-        STAMP_PACKET_LENGTH,
+        STAMP_PACKET_LENGTH + 8,
         socket.IPPROTO_UDP,
     )
 
@@ -645,8 +653,13 @@ def generate_stamp_test_reply_packet_from_template(
     # Take a reference to the template
     stamp_reply = template_packet
 
+    print( stamp_reply_payload_offset)
+    print(stamp_test_payload_offset)
+
     # Copy the STAMP Test packet into the STAMP Test Reply packet
     stamp_reply[stamp_reply_payload_offset + SENDER_INFORMATION_OFFSET : stamp_reply_payload_offset + SENDER_INFORMATION_OFFSET + SENDER_INFORMATION_LENGTH] = stamp_test_packet[stamp_test_payload_offset : stamp_test_payload_offset + SENDER_INFORMATION_LENGTH]
+
+    #stamp_reply[stamp_reply_payload_offset + SENDER_INFORMATION_OFFSET] = 255
 
     # Get the timestamp depending on the timestamp format
     if timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_NTP.value:
@@ -664,20 +677,24 @@ def generate_stamp_test_reply_packet_from_template(
     stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET : stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2)] = struct.pack('I', seconds)
     stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH] = struct.pack('I', fraction)
 
+    stamp_reply[stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET : stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + int(RECEIVE_TIMESTAMP_LENGTH/2)] = struct.pack('I', seconds)
+    stamp_reply[stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + int(RECEIVE_TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + RECEIVE_TIMESTAMP_LENGTH] = struct.pack('I', fraction)
+
     # Copy the sequence number to the STAMP Test Reply packet
     if sequence_number is None:
         sequence_number = 0  #TODO fix
         sequence_number = struct.pack("!I", sequence_number)
     stamp_reply[stamp_reply_payload_offset + SEQUENCE_NUMBER_OFFSET : stamp_reply_payload_offset + SEQUENCE_NUMBER_OFFSET + SEQUENCE_NUMBER_LENGTH] = sequence_number
 
-    # Source UDP port
-    stamp_reply[stamp_reply_payload_offset + DST_UDP_PORT_OFFSET : stamp_reply_payload_offset + DST_UDP_PORT_OFFSET + DST_UDP_PORT_LENGTH] = stamp_reply[stamp_test_payload_offset + DST_UDP_PORT_OFFSET : stamp_test_payload_offset + DST_UDP_PORT_OFFSET + DST_UDP_PORT_LENGTH]
+    # Dst UDP port
+    stamp_reply[stamp_reply_payload_offset + DST_UDP_PORT_OFFSET : stamp_reply_payload_offset + DST_UDP_PORT_OFFSET + DST_UDP_PORT_LENGTH] = stamp_test_packet[stamp_test_payload_offset + SRC_UDP_PORT_OFFSET : stamp_test_payload_offset + SRC_UDP_PORT_OFFSET + SRC_UDP_PORT_LENGTH]
+    print('off', stamp_reply_payload_offset)
 
     # Compute the UDP checksum
     stamp_reply[stamp_reply_payload_offset + UDP_CHECKSUM_OFFSET] = 0x00
     stamp_reply[stamp_reply_payload_offset + UDP_CHECKSUM_OFFSET + 1] = 0x00
 
-    ck = checksum(pseudo_hdr + stamp_reply[80:])
+    ck = checksum(pseudo_hdr + stamp_reply[stamp_reply_payload_offset + SRC_UDP_PORT_OFFSET:])
     if ck == 0:
         ck = 0xFFFF
     cs = struct.pack("!H", ck)

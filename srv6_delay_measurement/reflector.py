@@ -757,6 +757,8 @@ class STAMPSessionReflector:
 
         ipv6_addr = self.get_ipv6_src_address(stamp_session)
 
+        #print('src', ipv6_addr)
+
         return libstamp.core.generate_stamp_test_reply_template(
             src_ip=ipv6_addr,
             dst_ip=0,
@@ -799,7 +801,7 @@ class STAMPSessionReflector:
         udp_length = 8
 
         srh_length = 8 + 8*packet[ipv6_offset + SRH_OFFSET + HDR_EXT_LEN_SRH_OFFSET]
-        stamp_offset = ipv6_offset + srh_length + udp_length
+        stamp_offset = ipv6_offset + 40 + srh_length + udp_length
 
         #stamp_reply_payload_offset = ipv6_offset + 8 + len(stamp_session.return_sidlist)
 
@@ -845,7 +847,7 @@ class STAMPSessionReflector:
             #    respectively.
             raise NotImplementedError  # Currently we don't support it
 
-        stamp_reply_payload_offset = ipv6_offset + 8 + len(stamp_session.return_sidlist)
+        stamp_reply_payload_offset = ipv6_offset + 40 + 8 + 16 * len(stamp_session.return_sidlist) + 8 - 14
 
         # If the packet is valid, generate the STAMP Test Reply packet
         reply_packet = libstamp.core.generate_stamp_test_reply_packet_from_template(
