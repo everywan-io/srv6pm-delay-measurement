@@ -85,7 +85,7 @@ from srv6_delay_measurement.libs.libstamp import (
     SessionReflectorMode
 )
 
-from sniffer import AsyncSniffer as AsyncSnifferRaw
+from srv6_delay_measurement.sniffer import AsyncSniffer as AsyncSnifferRaw
 
 
 # Default command-line arguments
