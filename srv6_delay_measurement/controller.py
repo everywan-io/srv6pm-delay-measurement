@@ -271,7 +271,7 @@ class Controller:
             from .mongodb_driver import MongoDBDriver
             self.storage = MongoDBDriver(mongodb_client=mongodb_client)
         elif storage is None:
-            from .local_storage import LocalStorageDriver
+            from local_storage import LocalStorageDriver
             self.storage = LocalStorageDriver()
         else:
             logger.warning('Unrecognized or Unsupported storage driver %s. '

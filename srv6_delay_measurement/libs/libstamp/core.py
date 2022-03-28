@@ -33,6 +33,9 @@ import logging
 
 from collections import namedtuple
 from datetime import datetime
+from socket import inet_pton
+import socket
+import struct
 
 from scapy.all import send
 from scapy.fields import (
@@ -45,6 +48,7 @@ from scapy.fields import (
 from scapy.layers.inet import UDP
 from scapy.layers.inet6 import IPv6, IPv6ExtHdrSegmentRouting
 from scapy.packet import Packet
+from scapy.all import raw, checksum
 
 
 Timestamp = namedtuple('Timestamp', 'seconds fraction')
@@ -77,6 +81,84 @@ ParsedSTAMPTestReplyPacket = namedtuple(
 # Time Difference: 1-JAN-1900 to 1-JAN-1970
 UNIX_TO_NTP_TIMESTAMP_OFFSET = int(2208988800)  # 1-JAN-1900 to 1-JAN-1970
 _32_BIT_MASK = int(0xFFFFFFFF)     # To calculate 32bit fraction of the second
+
+
+"""
+STAMP Session-Sender Test Packet Format in Unauthenticated Mode (RFC 8972).
+
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                        Sequence Number                        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                          Timestamp                            |
+      |                                                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |         Error Estimate        |             SSID              |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |                                                               |
+      |                                                               |
+      |                         MBZ (28 octets)                       |
+      |                                                               |
+      |                                                               |
+      |                                                               |
+      |                                                               |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ~                            TLVs                               ~
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+"""
+
+"""
+STAMP Session-Reflector Test Reply Packet Format in Unauthenticated Mode
+(RFC 8972).
+
+     0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                        Sequence Number                        |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                          Timestamp                            |
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |         Error Estimate        |           SSID                |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                          Receive Timestamp                    |
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                 Session-Sender Sequence Number                |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                  Session-Sender Timestamp                     |
+    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    | Session-Sender Error Estimate |           MBZ                 |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |Ses-Sender TTL |                   MBZ                         |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    ~                            TLVs                               ~
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+"""
+
+# Offsets related to the beginning of the STAMP Test Reply packet
+SEQUENCE_NUMBER_OFFSET = 0
+SEQUENCE_NUMBER_LENGTH = 4
+TIMESTAMP_OFFSET = 4
+TIMESTAMP_LENGTH = 8
+ERROR_ESTIMATE_OFFSET = 12
+ERROR_ESTIMATE_LENGTH = 2
+SSID_OFFSET = 14
+SSID_LENGTH = 2
+RECEIVE_TIMESTAMP_OFFSET = 16
+RECEIVE_TIMESTAMP_LENGTH = 8
+SENDER_INFORMATION_OFFSET = 24
+SENDER_INFORMATION_LENGTH = 14
+UDP_CHECKSUM_OFFSET = -2
+UDP_CHECKSUM_LENGTH = 2
+DST_UDP_PORT_OFFSET = -6
+DST_UDP_PORT_LENGTH = 2
+SRC_UDP_PORT_OFFSET = -8
+SRC_UDP_PORT_LENGTH = 2
+
+STAMP_PACKET_LENGTH = 44
 
 
 class STAMPTestPacket(Packet):
@@ -444,6 +526,188 @@ def generate_stamp_test_packet(
     return packet
 
 
+def generate_stamp_test_reply_template(
+        src_ip,
+        dst_ip,
+        src_udp_port,
+        dst_udp_port,
+        sidlist,
+        ssid,
+        timestamp_format=TimestampFormat.TIMESTAMP_FORMAT_NTP.value,
+        ext_source_sync=False,
+        scale=0,
+        multiplier=1
+    ):
+
+    # Translate the timestamp format
+    if timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_NTP.value:
+        timestamp_format_flag = TimestampFormatFlag.NTP_v4.value
+    elif timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_PTPv2.value:
+        timestamp_format_flag = TimestampFormatFlag.PTP_V2.value
+
+    # Translate external source sync
+    if ext_source_sync:
+        sync_flag = SyncFlag.EXT_SYNC.value
+    else:
+        sync_flag = SyncFlag.NO_EXT_SYNC.value
+
+    # Build IPv6 header
+    ipv6_header = IPv6()
+    ipv6_header.src = src_ip
+    ipv6_header.dst = sidlist[0]
+
+    # Build SRv6 header
+    srv6_header = IPv6ExtHdrSegmentRouting()
+    srv6_header.addresses = sidlist[::-1]
+    srv6_header.segleft = len(sidlist) - 1
+    srv6_header.lastentry = len(sidlist) - 1
+
+    print('sid list', srv6_header.addresses)
+
+    # Build UDP header
+    udp_header = UDP()
+    udp_header.dport = dst_udp_port
+    udp_header.sport = src_udp_port
+
+    # Build payload (i.e. the STAMP packet)
+    stamp_packet = STAMPReplyPacket(
+        S=sync_flag,
+        Z=timestamp_format_flag,
+        scale=scale,
+        multiplier=multiplier,
+        ssid=ssid,
+    )
+
+    # Assemble the template packet
+    template = ipv6_header / srv6_header / udp_header / stamp_packet
+
+    # Return the template as bytearray
+    return bytearray(raw(template))
+
+
+def generate_stamp_test_reply_pseudo_header(
+        src_ip,
+        dst_ip
+    ):
+
+    print('pseudo header')
+    print(src_ip)
+    print(dst_ip)
+    print(STAMP_PACKET_LENGTH)
+
+    pseudo_hdr = struct.pack(
+        "!16s16sI3xB",
+        inet_pton(socket.AF_INET6, src_ip),
+        #inet_pton(socket.AF_INET6, '12:2::1'),
+        inet_pton(socket.AF_INET6, dst_ip),
+        STAMP_PACKET_LENGTH + 8,
+        socket.IPPROTO_UDP,
+    )
+
+    return pseudo_hdr
+
+
+def generate_stamp_test_reply_packet_from_template(
+        template_packet,
+        pseudo_hdr,
+        stamp_test_packet,
+        stamp_test_payload_offset,
+        stamp_reply_payload_offset,
+        sequence_number,
+        timestamp_format=TimestampFormat.TIMESTAMP_FORMAT_NTP.value,
+    ):
+    """
+    Generate a STAMP Test packet from a template packet.
+
+    Parameters
+    ----------
+    src_ip : str
+        Source IP address of the STAMP Test packet.
+    dst_ip : str
+        Destination IP address of the STAMP Test packet.
+    src_udp_port : int
+        Source UDP port of the STAMP Test packet.
+    dst_udp_port : int
+        Destination UDP port of the STAMP Test packet.
+    sidlist : list
+        Segment List to be used for the STAMP packet.
+    ssid : int
+        STAMP Session Sender Identifier.
+    sequence_number : int
+        Sequence Number of the STAMP Test packet.
+    timestamp_format : str, optional
+        Format of the timestamp to be used for the STAMP packet. Two timestamp
+         formats are supported by STAMP: "ntp" and "ptp" (default "ntp").
+    ext_source_sync : bool, optional
+        Whether an external source is used to synchronize the Sender and
+         Reflector clocks (default False).
+    scale: int, optional
+        Scale field of the Error Estimate field (default 0).
+    multiplier: int, optional
+        Multiplier field of the Error Estimate field (default 1).
+
+    Returns
+    -------
+    packet : scapy.packet.Packet
+        The generated STAMP Test.
+    """
+
+    # Take a reference to the template
+    stamp_reply = template_packet
+
+    #print( stamp_reply_payload_offset)
+    #print(stamp_test_payload_offset)
+
+    # Copy the STAMP Test packet into the STAMP Test Reply packet
+    stamp_reply[stamp_reply_payload_offset + SENDER_INFORMATION_OFFSET : stamp_reply_payload_offset + SENDER_INFORMATION_OFFSET + SENDER_INFORMATION_LENGTH] = stamp_test_packet[stamp_test_payload_offset : stamp_test_payload_offset + SENDER_INFORMATION_LENGTH]
+
+    #stamp_reply[stamp_reply_payload_offset + SENDER_INFORMATION_OFFSET] = 255
+
+    # Get the timestamp depending on the timestamp format
+    if timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_NTP.value:
+        # Get the current timestamp
+        timestamp = \
+            datetime.timestamp(datetime.now()) + UNIX_TO_NTP_TIMESTAMP_OFFSET
+        seconds = int(timestamp)
+        fraction = int((timestamp - int(timestamp)) * _32_BIT_MASK)
+    elif timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_PTPv2.value:
+        raise NotImplementedError
+
+    #print(stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH/2)
+
+    # Copy the current timestamp to the STAMP Test Reply packet
+    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET : stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2)] = struct.pack('!I', seconds)
+    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH] = struct.pack('!I', fraction)
+
+    stamp_reply[stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET : stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + int(RECEIVE_TIMESTAMP_LENGTH/2)] = struct.pack('!I', seconds)
+    stamp_reply[stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + int(RECEIVE_TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + RECEIVE_TIMESTAMP_OFFSET + RECEIVE_TIMESTAMP_LENGTH] = struct.pack('!I', fraction)
+
+    # Copy the sequence number to the STAMP Test Reply packet
+    if sequence_number is None:
+        sequence_number = stamp_test_packet[stamp_test_payload_offset + SEQUENCE_NUMBER_OFFSET: stamp_test_payload_offset + SEQUENCE_NUMBER_OFFSET + SEQUENCE_NUMBER_LENGTH]
+    else:
+        sequence_number = struct.pack('!I', sequence_number)
+    stamp_reply[stamp_reply_payload_offset + SEQUENCE_NUMBER_OFFSET : stamp_reply_payload_offset + SEQUENCE_NUMBER_OFFSET + SEQUENCE_NUMBER_LENGTH] = sequence_number
+
+    # Dst UDP port
+    stamp_reply[stamp_reply_payload_offset + DST_UDP_PORT_OFFSET : stamp_reply_payload_offset + DST_UDP_PORT_OFFSET + DST_UDP_PORT_LENGTH] = stamp_test_packet[stamp_test_payload_offset + SRC_UDP_PORT_OFFSET : stamp_test_payload_offset + SRC_UDP_PORT_OFFSET + SRC_UDP_PORT_LENGTH]
+    #print('off', stamp_reply_payload_offset)
+
+    # Compute the UDP checksum
+    stamp_reply[stamp_reply_payload_offset + UDP_CHECKSUM_OFFSET] = 0x00
+    stamp_reply[stamp_reply_payload_offset + UDP_CHECKSUM_OFFSET + 1] = 0x00
+
+    ck = checksum(pseudo_hdr + stamp_reply[stamp_reply_payload_offset + SRC_UDP_PORT_OFFSET:])
+    if ck == 0:
+        ck = 0xFFFF
+    cs = struct.pack("!H", ck)
+    stamp_reply[stamp_reply_payload_offset + UDP_CHECKSUM_OFFSET] = cs[0]
+    stamp_reply[stamp_reply_payload_offset + UDP_CHECKSUM_OFFSET + 1] = cs[1]
+
+    # Return the STAMP Test Reply packet
+    return stamp_reply
+
+
 def generate_stamp_reply_packet(
         stamp_test_packet, src_ip, dst_ip,
         src_udp_port, dst_udp_port, sidlist, ssid, sequence_number=None,
@@ -732,5 +996,43 @@ def send_stamp_packet(packet, socket=None):
         # and close it after sending the packet
         logging.debug('Sending packet %s, opening a new socket', packet)
         send(packet, verbose=0)
+
+    logging.debug('Packet sent')
+
+
+def send_stamp_packet_raw(packet, destination, sock=None):
+    """
+    Send a raw STAMP packet (Test packet or Reply packet).
+
+    Parameters
+    ----------
+    packet : bytes
+        The STAMP packet to be sent.
+    destination : str
+        The destination of the STAMP packet.
+    socket : socket.Socket, optional
+        The socket on which the STAMP packet should be sent. If socket is
+        None, this function will open a new socket, send the packets and close
+        the socket (default None).
+
+    Returns
+    -------
+    None.
+    """
+
+    # If a socket has been provided, we use the provided socket
+    if sock is not None:
+        logging.debug('Sending packet %s, reusing opened socket', packet)
+        sock.sendto(packet, (destination, 0))
+    else:
+        #print('new sock')
+        # Otherwise, we use the send() function, which will open a new socket
+        # and close it after sending the packet
+        logging.debug('Sending packet %s, opening a new socket', packet)
+        sock = socket.socket(
+            socket.AF_INET6, socket.SOCK_RAW, socket.IPPROTO_RAW
+        )
+        sock.sendto(packet, (destination, 0))
+        sock.close()
 
     logging.debug('Packet sent')
