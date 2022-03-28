@@ -2,7 +2,8 @@
 
 # Variables
 GRPC_STUBS_PATH="./srv6_delay_measurement/commons/protos/srv6pm/gen-py"
-VENV_ACTIVATE_SCRIPT="./.venv/bin/activate"
+#VENV_ACTIVATE_SCRIPT="./.venv/bin/activate"
+VENV_ACTIVATE_SCRIPT="../srv6pm-delay-measurement-refl-improvements/.venv/bin/activate"
 REFLECTOR_FILENAME="./srv6_delay_measurement/reflector.py"
 
 # Require root

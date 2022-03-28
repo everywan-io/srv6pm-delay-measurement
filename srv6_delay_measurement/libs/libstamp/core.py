@@ -658,12 +658,15 @@ def generate_stamp_test_reply_packet_from_template(
     elif timestamp_format == TimestampFormat.TIMESTAMP_FORMAT_PTPv2.value:
         raise NotImplementedError
 
+    #print(stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH/2)
+
     # Copy the current timestamp to the STAMP Test Reply packet
-    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET : stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH/2] = struct.pack('I', seconds)
-    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH/2 : stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH] = struct.pack('I', fraction)
+    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET : stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2)] = struct.pack('I', seconds)
+    stamp_reply[stamp_reply_payload_offset + TIMESTAMP_OFFSET + int(TIMESTAMP_LENGTH/2) : stamp_reply_payload_offset + TIMESTAMP_OFFSET + TIMESTAMP_LENGTH] = struct.pack('I', fraction)
 
     # Copy the sequence number to the STAMP Test Reply packet
     if sequence_number is None:
+        sequence_number = 0  #TODO fix
         sequence_number = struct.pack("!I", sequence_number)
     stamp_reply[stamp_reply_payload_offset + SEQUENCE_NUMBER_OFFSET : stamp_reply_payload_offset + SEQUENCE_NUMBER_OFFSET + SEQUENCE_NUMBER_LENGTH] = sequence_number
 
@@ -977,7 +980,7 @@ def send_stamp_packet(packet, socket=None):
     logging.debug('Packet sent')
 
 
-def send_stamp_packet_raw(packet, destination, socket=None):
+def send_stamp_packet_raw(packet, destination, sock=None):
     """
     Send a raw STAMP packet (Test packet or Reply packet).
 
@@ -998,17 +1001,18 @@ def send_stamp_packet_raw(packet, destination, socket=None):
     """
 
     # If a socket has been provided, we use the provided socket
-    if socket is not None:
+    if sock is not None:
         logging.debug('Sending packet %s, reusing opened socket', packet)
-        socket.sendto(packet, (destination, 0))
+        sock.sendto(packet, (destination, 0))
     else:
+        #print('new sock')
         # Otherwise, we use the send() function, which will open a new socket
         # and close it after sending the packet
         logging.debug('Sending packet %s, opening a new socket', packet)
-        socket = socket.socket(
+        sock = socket.socket(
             socket.AF_INET6, socket.SOCK_RAW, socket.IPPROTO_RAW
         )
-        socket.sendto(packet, (destination, 0))
-        socket.close()
+        sock.sendto(packet, (destination, 0))
+        sock.close()
 
     logging.debug('Packet sent')

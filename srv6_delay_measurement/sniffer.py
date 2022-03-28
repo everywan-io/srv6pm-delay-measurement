@@ -12,7 +12,7 @@ import mmap
 import select
 from threading import Thread
 
-from scapy.all import attach_filter
+from scapy.arch.linux import attach_filter
 from scapy.all import Ether
 
 
@@ -131,15 +131,18 @@ class AsyncSniffer:
     def _run(self):
         poller = select.poll()
         poller.register(self.sniffer.sock, select.POLLIN)
-
+        #print('start sniff')
         while not self.stop_sniff:
             events = poller.poll(500)
             for (fd, evt) in events:
+                #print('event')
                 assert(fd == self.sniffer.sock.fileno())
                 assert(evt == select.POLLIN)
 
                 for (ts, pkt) in self.sniffer.recv_packets():
                     self.prn(pkt, ts)
+            #print('polling')
+        #print('stopped sniff')
 
     def _setup_thread(self):
         self.thread = Thread(
@@ -147,6 +150,7 @@ class AsyncSniffer:
             name="AsyncSniffer"
         )
         self.thread.daemon = True
+        #print('start thread')
 
     def start(self):
         """Starts AsyncSniffer in async mode"""
