@@ -38,7 +38,7 @@ import queue
 import logging
 
 import common_pb2
-from .libs.libstamp import (
+from srv6_delay_measurement.libs.libstamp import (
     AuthenticationMode,
     DelayMeasurementMode,
     PacketLossType,

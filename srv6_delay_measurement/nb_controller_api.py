@@ -39,7 +39,7 @@ import common_pb2
 import controller_pb2
 import controller_pb2_grpc
 
-from .utils import get_address_family
+from srv6_delay_measurement.utils import get_address_family
 
 # The IP address and port of the gRPC server started on the SDN controller
 DEFAULT_GRPC_SERVER_IP = '::'

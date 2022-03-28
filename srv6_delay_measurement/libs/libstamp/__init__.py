@@ -25,7 +25,7 @@
 
 """Python Library implementing the STAMP protocol [RFC8762]."""
 
-from .core import (
+from srv6_delay_measurement.libstamp.core import (
     Timestamp,
     ParsedSTAMPTestPacket,
     ParsedSTAMPTestReplyPacket,

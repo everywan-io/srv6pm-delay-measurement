@@ -63,7 +63,7 @@ from srv6_delay_measurement.exceptions import (
 from scapy.layers.inet6 import L3RawSocket6
 from scapy.sendrecv import AsyncSniffer
 
-from .utils import (
+from srv6_delay_measurement.utils import (
     MAX_SEQUENCE_NUMBER,
     MAX_SSID,
     MIN_SSID,
@@ -77,8 +77,8 @@ from .utils import (
     py_to_grpc
 )
 
-from .libs import libstamp
-from .libs.libstamp import (
+from srv6_delay_measurement.libs import libstamp
+from srv6_delay_measurement.libs.libstamp import (
     AuthenticationMode,
     TimestampFormat,
     PacketLossType,

@@ -1,8 +1,8 @@
 from time import sleep
 
-from reflector import STAMPSessionReflector
+from srv6_delay_measurement.reflector import STAMPSessionReflector
 
-from libs.libstamp import (
+from srv6_delay_measurement.libs.libstamp import (
     AuthenticationMode,
     TimestampFormat,
     SessionReflectorMode
