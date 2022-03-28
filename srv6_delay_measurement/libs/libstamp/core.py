@@ -499,7 +499,7 @@ def generate_stamp_test_packet(
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
     srv6_header.addresses = sidlist[::-1]
-    srv6_header.segleft = len(sidlist) - 1
+    srv6_header.segleft = len(sidlist)
     srv6_header.lastentry = len(sidlist) - 1
 
     # Build UDP header
@@ -559,8 +559,10 @@ def generate_stamp_test_reply_template(
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
     srv6_header.addresses = sidlist[::-1]
-    srv6_header.segleft = len(sidlist) - 1
+    srv6_header.segleft = len(sidlist)
     srv6_header.lastentry = len(sidlist) - 1
+
+    print('sid list', srv6_header.addresses)
 
     # Build UDP header
     udp_header = UDP()
@@ -653,8 +655,8 @@ def generate_stamp_test_reply_packet_from_template(
     # Take a reference to the template
     stamp_reply = template_packet
 
-    print( stamp_reply_payload_offset)
-    print(stamp_test_payload_offset)
+    #print( stamp_reply_payload_offset)
+    #print(stamp_test_payload_offset)
 
     # Copy the STAMP Test packet into the STAMP Test Reply packet
     stamp_reply[stamp_reply_payload_offset + SENDER_INFORMATION_OFFSET : stamp_reply_payload_offset + SENDER_INFORMATION_OFFSET + SENDER_INFORMATION_LENGTH] = stamp_test_packet[stamp_test_payload_offset : stamp_test_payload_offset + SENDER_INFORMATION_LENGTH]
@@ -688,7 +690,7 @@ def generate_stamp_test_reply_packet_from_template(
 
     # Dst UDP port
     stamp_reply[stamp_reply_payload_offset + DST_UDP_PORT_OFFSET : stamp_reply_payload_offset + DST_UDP_PORT_OFFSET + DST_UDP_PORT_LENGTH] = stamp_test_packet[stamp_test_payload_offset + SRC_UDP_PORT_OFFSET : stamp_test_payload_offset + SRC_UDP_PORT_OFFSET + SRC_UDP_PORT_LENGTH]
-    print('off', stamp_reply_payload_offset)
+    #print('off', stamp_reply_payload_offset)
 
     # Compute the UDP checksum
     stamp_reply[stamp_reply_payload_offset + UDP_CHECKSUM_OFFSET] = 0x00
@@ -794,7 +796,7 @@ def generate_stamp_reply_packet(
     # Build SRv6 header
     srv6_header = IPv6ExtHdrSegmentRouting()
     srv6_header.addresses = sidlist[::-1]
-    srv6_header.segleft = len(sidlist) - 1
+    srv6_header.segleft = len(sidlist)
     srv6_header.lastentry = len(sidlist) - 1
 
     # Build UDP header

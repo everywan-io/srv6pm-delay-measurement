@@ -774,7 +774,7 @@ class STAMPSessionReflector:
 
         return libstamp.core.generate_stamp_test_reply_pseudo_header(
             src_ip=ipv6_addr,
-            dst_ip=stamp_session.return_sidlist[0]
+            dst_ip=stamp_session.return_sidlist[-1]
         )
 
     def stamp_test_packet_received_raw(self, packet, ts):
