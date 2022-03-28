@@ -550,10 +550,10 @@ class Controller:
             raise STAMPSessionsExistError
 
         if node.is_sender_initialized:
-            self.reset_stamp_sender(node_id=node_id)
+            self.reset_stamp_sender(node_id=node_id, tenantid=tenantid)
 
         if node.is_reflector_initialized:
-            self.reset_stamp_reflector(node_id=node_id)
+            self.reset_stamp_reflector(node_id=node_id, tenantid=tenantid)
 
         # Remove the STAMP node
         self.storage.remove_stamp_node(node_id=node_id, tenantid=tenantid)
@@ -882,10 +882,10 @@ class Controller:
         logger.debug('Detecting node type')
         if node.is_stamp_sender():
             logger.debug('Node is a STAMP Sender')
-            self.reset_stamp_sender(node_id)
+            self.reset_stamp_sender(node_id=node_id, tenantid=tenantid)
         if node.is_stamp_reflector():
             logger.debug('Node is a STAMP Reflector')
-            self.reset_stamp_reflector(node_id)
+            self.reset_stamp_reflector(node_id=node_id, tenantid=tenantid)
 
     def _create_stamp_sender_session(self, ssid, sender, reflector,
                                      sidlist=[], interval=10, auth_mode=None,
@@ -1377,6 +1377,7 @@ class Controller:
                          f'{stamp_session.duration} seconds')
             Thread(target=self._stop_stamp_session_after,
                    kwargs={'ssid': ssid,
+                           'tenantid': tenantid,
                            'seconds': stamp_session.duration}).start()
 
         logger.debug('STAMP Session started successfully')
@@ -1442,7 +1443,7 @@ class Controller:
         self.storage.set_session_running(
             ssid=ssid, tenantid=tenantid, is_running=False)
 
-    def _stop_stamp_session_after(self, ssid, seconds):
+    def _stop_stamp_session_after(self, ssid, tenantid, seconds):
         """
         Wait for X seconds and stop an existing STAMP Session identified by
         the SSID.
@@ -1638,7 +1639,7 @@ class Controller:
         if ssid is not None:
             if self.storage.stamp_session_exists(ssid=ssid, tenantid=tenantid):
                 # Fetch results from the STAMP Sender
-                self.fetch_stamp_results(ssid=ssid)
+                self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
                 # Return the STAMP Session
                 return self.storage.get_stamp_sessions(session_ids=[ssid],
                                                        tenantid=tenantid)
@@ -1651,12 +1652,12 @@ class Controller:
         # Fetch all the results
         for _ssid in self.storage.get_stamp_sessions(tenantid=tenantid,
                                                      return_dict=True):
-            self.fetch_stamp_results(ssid=_ssid)
+            self.fetch_stamp_results(ssid=_ssid, tenantid=tenantid)
 
         # Return all the STAMP Sessions
         return self.storage.get_stamp_sessions(tenantid=tenantid)
 
-    def get_stamp_results_average(self, ssid, fetch_results_from_stamp=False):
+    def get_stamp_results_average(self, ssid, fetch_results_from_stamp=False, tenantid='1'):
         """
         Return the results (average delays only) stored in the controller.
 
@@ -1686,7 +1687,7 @@ class Controller:
 
         # Get the results
         direct_path_results, return_path_results = \
-            self.get_stamp_results(self, ssid, fetch_results_from_stamp)
+            self.get_stamp_results(self, ssid, fetch_results_from_stamp, tenantid)
 
         # Return the mean delay
         return (direct_path_results.mean_delay, return_path_results.mean_delay)
@@ -1729,13 +1730,13 @@ class Controller:
 
         # Eventually, fetch new results from the STAMP Sender
         if fetch_results_from_stamp:
-            self.fetch_stamp_results(ssid)
+            self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
 
         # Return the mean delay
         return (stamp_session.stamp_session_direct_path_results,
                 stamp_session.stamp_session_return_path_results)
 
-    def print_stamp_results(self, ssid, fetch_results_from_stamp=False):
+    def print_stamp_results(self, ssid, fetch_results_from_stamp=False, tenantid='1'):
         """
         Print the results stored in the controller.
 
@@ -1757,7 +1758,7 @@ class Controller:
 
         # Get results from the controller inventory
         mean_delay_direct_path, mean_delay_return_path = \
-            self.get_stamp_results_average(ssid, fetch_results_from_stamp)
+            self.get_stamp_results_average(ssid, fetch_results_from_stamp, tenantid)
 
         # Print results
         print()
