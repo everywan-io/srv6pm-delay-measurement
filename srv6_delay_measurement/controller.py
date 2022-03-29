@@ -1468,7 +1468,7 @@ class Controller:
 
         # Stop the STAMP Session
         try:
-            return self.stop_stamp_session(ssid)
+            return self.stop_stamp_session(ssid=ssid, tenantid=tenantid)
         except STAMPSessionNotRunningError:
             logger.warning('Scheduled STAMP Session stop operation failed:'
                            'Session %d already stopped', ssid)

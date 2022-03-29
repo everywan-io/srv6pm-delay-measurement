@@ -320,7 +320,7 @@ class NorthboundInterface:
                 raise STAMPError(response.description)
             # Eventually, start the STAMP Session after its creation
             if start_after_creation:
-                self.start_stamp_session(ssid=response.ssid)
+                self.start_stamp_session(ssid=response.ssid, tenantid=tenantid)
             # Extract and return the SSID
             return response.ssid
         except grpc.RpcError as e:
