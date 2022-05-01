@@ -741,6 +741,7 @@ class STAMPSessionReflector:
             iface=self.stamp_interfaces,
             filter=stamp_filter,
             store=False,
+            L2socket=L3RawSocket6,
             prn=self.stamp_test_packet_received)
         return sniffer
 
