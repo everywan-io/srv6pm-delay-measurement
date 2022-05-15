@@ -1328,6 +1328,8 @@ class Controller:
                 ssid, tenantid
             )
             self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
+            # Wait 5 seconds before next polling
+            time.sleep(5)
 
     def start_stamp_session(self, ssid, tenantid='1'):
         """
