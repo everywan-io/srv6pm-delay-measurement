@@ -1319,6 +1319,16 @@ class Controller:
         logger.debug('STAMP Session created successfully, ssid: %d', ssid)
         return ssid
 
+    def fetch_stamp_results_polling(self, ssid, tenantid='1'):
+        stamp_session = self.storage.get_stamp_session(
+            ssid=ssid, tenantid=tenantid)
+        while stamp_session is not None and stamp_session.is_running:
+            logger.info(
+                'Fetching results for STAMP Session %s, tenantid %s',
+                ssid, tenantid
+            )
+            self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
+
     def start_stamp_session(self, ssid, tenantid='1'):
         """
         Start an existing STAMP Session identified by the SSID.
@@ -1389,6 +1399,11 @@ class Controller:
         logger.debug('STAMP Session started successfully')
         self.storage.set_session_running(
             ssid=ssid, tenantid=tenantid, is_running=True)
+
+        # Start polling to retrieve results
+        Thread(target=self.fetch_stamp_results_polling,
+               kwargs={'ssid': ssid,
+                       'tenantid': tenantid}).start()
 
     def stop_stamp_session(self, ssid, tenantid='1'):
         """
@@ -1645,15 +1660,15 @@ class Controller:
         if ssid is not None:
             if self.storage.stamp_session_exists(ssid=ssid, tenantid=tenantid):
                 # Fetch results from the STAMP Sender
-                try:
-                    self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
-                except grpc.RpcError as err:
-                    if err.code() == grpc.StatusCode.UNAVAILABLE:
-                        logger.warning(
-                            'Sender not connected. Skipping fetch_stamp_results.'
-                        )
-                    else:
-                        raise err
+                # try:
+                #     self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
+                # except grpc.RpcError as err:
+                #     if err.code() == grpc.StatusCode.UNAVAILABLE:
+                #         logger.warning(
+                #             'Sender not connected. Skipping fetch_stamp_results.'
+                #         )
+                #     else:
+                #         raise err
                 # Return the STAMP Session
                 return self.storage.get_stamp_sessions(session_ids=[ssid],
                                                        tenantid=tenantid)
@@ -1664,17 +1679,17 @@ class Controller:
         # No SSID provided
 
         # Fetch all the results
-        for _ssid in self.storage.get_stamp_sessions(tenantid=tenantid,
-                                                     return_dict=True):
-            try:
-                self.fetch_stamp_results(ssid=_ssid, tenantid=tenantid)
-            except grpc.RpcError as err:
-                if err.code() == grpc.StatusCode.UNAVAILABLE:
-                    logger.warning(
-                        'Sender not connected. Skipping fetch_stamp_results.'
-                    )
-                else:
-                    raise err
+        # for _ssid in self.storage.get_stamp_sessions(tenantid=tenantid,
+        #                                              return_dict=True):
+        #     try:
+        #         self.fetch_stamp_results(ssid=_ssid, tenantid=tenantid)
+        #     except grpc.RpcError as err:
+        #         if err.code() == grpc.StatusCode.UNAVAILABLE:
+        #             logger.warning(
+        #                 'Sender not connected. Skipping fetch_stamp_results.'
+        #             )
+        #         else:
+        #             raise err
 
         # Return all the STAMP Sessions
         return self.storage.get_stamp_sessions(tenantid=tenantid)
@@ -2320,7 +2335,7 @@ class STAMPControllerServicer(controller_pb2_grpc.STAMPControllerService):
             direct_path_results, return_path_results = \
                 self.controller.get_stamp_results(
                     ssid=request.ssid,
-                    fetch_results_from_stamp=True,
+                    fetch_results_from_stamp=False,
                     tenantid=tenantid)
         except STAMPSessionNotFoundError:
             # The STAMP Session does not exist
