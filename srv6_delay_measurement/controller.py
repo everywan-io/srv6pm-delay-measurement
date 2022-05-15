@@ -1576,7 +1576,7 @@ class Controller:
                 'Cannot fetch STAMP Session results (SSID %d): %s',
                 request.ssid, reply.description)
             # Raise an exception
-            raise GetSTAMPResultsError(reply.description)
+            # raise GetSTAMPResultsError(reply.description)
 
         logger.debug('Got %f results', len(reply.results))
 
@@ -1645,7 +1645,15 @@ class Controller:
         if ssid is not None:
             if self.storage.stamp_session_exists(ssid=ssid, tenantid=tenantid):
                 # Fetch results from the STAMP Sender
-                self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
+                try:
+                    self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
+                except grpc.RpcError as err:
+                    if err.code() == grpc.StatusCode.UNAVAILABLE:
+                        logger.warning(
+                            'Sender not connected. Skipping fetch_stamp_results.'
+                        )
+                    else:
+                        raise err
                 # Return the STAMP Session
                 return self.storage.get_stamp_sessions(session_ids=[ssid],
                                                        tenantid=tenantid)
@@ -1658,7 +1666,15 @@ class Controller:
         # Fetch all the results
         for _ssid in self.storage.get_stamp_sessions(tenantid=tenantid,
                                                      return_dict=True):
-            self.fetch_stamp_results(ssid=_ssid, tenantid=tenantid)
+            try:
+                self.fetch_stamp_results(ssid=_ssid, tenantid=tenantid)
+            except grpc.RpcError as err:
+                if err.code() == grpc.StatusCode.UNAVAILABLE:
+                    logger.warning(
+                        'Sender not connected. Skipping fetch_stamp_results.'
+                    )
+                else:
+                    raise err
 
         # Return all the STAMP Sessions
         return self.storage.get_stamp_sessions(tenantid=tenantid)
@@ -1736,7 +1752,15 @@ class Controller:
 
         # Eventually, fetch new results from the STAMP Sender
         if fetch_results_from_stamp:
-            self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
+            try:
+                self.fetch_stamp_results(ssid=ssid, tenantid=tenantid)
+            except grpc.RpcError as err:
+                if err.code() == grpc.StatusCode.UNAVAILABLE:
+                    logger.warning(
+                        'Sender not connected. Skipping fetch_stamp_results.'
+                    )
+                else:
+                    raise err
 
         # Return the mean delay
         return (stamp_session.stamp_session_direct_path_results,
