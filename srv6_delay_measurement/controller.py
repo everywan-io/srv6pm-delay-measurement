@@ -289,8 +289,11 @@ class Controller:
         if stub is None:
             channel, stub = get_grpc_channel_sender(ip=node.grpc_ip,
                                                     port=node.grpc_port)
-            self.sender_channels[node.node_id] = channel
-            self.sender_stubs[node.node_id] = stub
+            # FIXME: currently channel caching does not work properly because
+            # of a bug; as a workaround, we disable caching
+            #
+            # self.sender_channels[node.node_id] = channel
+            # self.sender_stubs[node.node_id] = stub
         else:
             channel = self.sender_channels[node.node_id]
         return channel, stub
@@ -300,8 +303,11 @@ class Controller:
         if stub is None:
             channel, stub = get_grpc_channel_reflector(ip=node.grpc_ip,
                                                        port=node.grpc_port)
-            self.reflector_channels[node.node_id] = channel
-            self.reflector_stubs[node.node_id] = stub
+            # FIXME: currently channel caching does not work properly because
+            # of a bug; as a workaround, we disable caching
+            #
+            # self.reflector_channels[node.node_id] = channel
+            # self.reflector_stubs[node.node_id] = stub
         else:
             channel = self.reflector_channels[node.node_id]
         return channel, stub
