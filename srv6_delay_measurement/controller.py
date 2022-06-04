@@ -27,7 +27,7 @@
 Implementation of a SDN Controller capable of controlling STAMP Sessions.
 """
 
-from .libs.libstamp import (
+from srv6_delay_measurement.libs.libstamp import (
     AuthenticationMode,
     DelayMeasurementMode,
     PacketLossType,
@@ -40,14 +40,14 @@ import sys
 from pkg_resources import resource_filename
 sys.path.append(resource_filename(__name__, 'commons/protos/srv6pm/gen_py/'))
 
-from .utils import get_address_family
-from .utils import grpc_to_py_resolve_defaults, py_to_grpc
-from .controller_utils import STAMPNode, STAMPSession, compute_packet_delay
+from srv6_delay_measurement.utils import get_address_family
+from srv6_delay_measurement.utils import grpc_to_py_resolve_defaults, py_to_grpc
+from srv6_delay_measurement.controller_utils import STAMPNode, STAMPSession, compute_packet_delay
 import stamp_sender_pb2_grpc
 import stamp_sender_pb2
 import stamp_reflector_pb2_grpc
 import stamp_reflector_pb2
-from .exceptions import (
+from srv6_delay_measurement.exceptions import (
     CreateSTAMPSessionError,
     DestroySTAMPSessionError,
     GetSTAMPResultsError,
@@ -271,7 +271,7 @@ class Controller:
             from .mongodb_driver import MongoDBDriver
             self.storage = MongoDBDriver(mongodb_client=mongodb_client)
         elif storage is None:
-            from .local_storage import LocalStorageDriver
+            from local_storage import LocalStorageDriver
             self.storage = LocalStorageDriver()
         else:
             logger.warning('Unrecognized or Unsupported storage driver %s. '

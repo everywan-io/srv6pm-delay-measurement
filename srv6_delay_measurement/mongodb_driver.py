@@ -6,7 +6,7 @@ import logging
 import time
 import urllib.parse
 
-from .controller_utils import (
+from srv6_delay_measurement.controller_utils import (
     STAMPNode,
     STAMPSession,
     STAMPSessionResults,

@@ -35,6 +35,7 @@ import logging
 import netifaces
 import os
 import socket
+import struct
 
 import grpc
 
@@ -62,7 +63,7 @@ from srv6_delay_measurement.exceptions import (
 from scapy.layers.inet6 import L3RawSocket6
 from scapy.sendrecv import AsyncSniffer
 
-from .utils import (
+from srv6_delay_measurement.utils import (
     MAX_SSID,
     MIN_SSID,
     NEXT_HEADER_IPV6_FIELD,
@@ -70,17 +71,21 @@ from .utils import (
     ROUTING_HEADER_PROTOCOL_NUMBER,
     UDP_DEST_PORT_FIELD,
     UDP_PROTOCOL_NUMBER,
+    SRH_OFFSET,
+    HDR_EXT_LEN_SRH_OFFSET,
     STAMPReflectorSession,
     grpc_to_py_resolve_defaults,
     py_to_grpc
 )
 
-from .libs import libstamp
-from .libs.libstamp import (
+from srv6_delay_measurement.libs import libstamp
+from srv6_delay_measurement.libs.libstamp import (
     AuthenticationMode,
     TimestampFormat,
     SessionReflectorMode
 )
+
+from srv6_delay_measurement.sniffer import AsyncSniffer as AsyncSnifferRaw
 
 
 # Default command-line arguments
@@ -95,6 +100,9 @@ logging.basicConfig(
 
 # Get the root logger
 logger = logging.getLogger()
+
+
+RAW_PROCESSING = True
 
 
 class STAMPSessionReflector:
@@ -425,6 +433,10 @@ class STAMPSessionReflector:
         )
         logger.debug('STAMP Session initialized: SSID %d', ssid)
 
+        if RAW_PROCESSING:
+            stamp_session.packet_template = self.create_stamp_test_reply_packet_template(stamp_session=stamp_session)
+            stamp_session.pseudo_header = self.create_stamp_test_reply_pseudo_header(stamp_session=stamp_session)
+
         # Add the STAMP session to the STAMP sessions dict
         self.stamp_sessions[ssid] = stamp_session
 
@@ -622,6 +634,7 @@ class STAMPSessionReflector:
 
         logger.debug('STAMP Test packet received: \n\n%s',
                      packet.show(dump=True))
+        #print('pkt received')
 
         # Parse the received STAMP Test packet
         stamp_test_packet = libstamp.parse_stamp_test_packet(packet)
@@ -709,6 +722,150 @@ class STAMPSessionReflector:
         # Send the reply packet to the Sender
         libstamp.send_stamp_packet(reply_packet, self.reflector_socket)
 
+    def get_ipv6_src_address(self, stamp_session):
+        
+
+        # Get an IPv6 address to be used as source IPv6 address for the STAMP
+        # packet.
+        #
+        # We support three methods (listed in order of preference):
+        #    * stamp_source_ipv6_address specific for this STAMP Session
+        #    * global stamp_source_ipv6_address
+        #    * IPv6 address of the loopback interface
+        #
+        # We use the specific stamp_source_ipv6_address; if it is None, we use
+        # the global stamp_source_ipv6_address; if it is None, we use the IPv6
+        # address of the loopback interface
+        logger.debug('Getting a valid STAMP Source IPv6 Address')
+        if stamp_session.stamp_source_ipv6_address is not None:
+            ipv6_addr = stamp_session.stamp_source_ipv6_address
+            logger.debug('Using the STAMP Session specific IPv6 '
+                         'address: {ipv6_addr}'.format(ipv6_addr=ipv6_addr))
+        elif self.stamp_source_ipv6_address is not None:
+            ipv6_addr = self.stamp_source_ipv6_address
+            logger.debug('Using the STAMP Session global IPv6 '
+                         'address: {ipv6_addr}'.format(ipv6_addr=ipv6_addr))
+        else:
+            loopback_iface = netifaces.ifaddresses('lo')
+            ipv6_addr = loopback_iface[netifaces.AF_INET6][0]['addr']
+            logger.debug('Using the loopback IPv6 address: {ipv6_addr}'
+                         .format(ipv6_addr=ipv6_addr))
+
+        return ipv6_addr
+
+    def create_stamp_test_reply_packet_template(self, stamp_session):
+
+        ipv6_addr = self.get_ipv6_src_address(stamp_session)
+
+        #print('src', ipv6_addr)
+
+        return libstamp.core.generate_stamp_test_reply_template(
+            src_ip=ipv6_addr,
+            dst_ip=0,
+            dst_udp_port=0,
+            src_udp_port=self.reflector_udp_port,
+            sidlist=stamp_session.return_sidlist,
+            ssid=stamp_session.ssid,
+            timestamp_format=stamp_session.timestamp_format,
+        )
+
+    def create_stamp_test_reply_pseudo_header(self, stamp_session):
+        ipv6_addr = self.get_ipv6_src_address(stamp_session)
+
+        return libstamp.core.generate_stamp_test_reply_pseudo_header(
+            src_ip=ipv6_addr,
+            dst_ip=stamp_session.return_sidlist[-1]
+        )
+
+    def stamp_test_packet_received_raw(self, packet, ts):
+        """
+        Called when a STAMP Test packet is received: validate the received
+         packet, generate a STAMP Test Reply packet and send it to the
+         Session-Sender.
+
+        Parameters
+        ----------
+        packet : scapy.packet.Packet
+            The STAMP Test packet received from the Sender.
+
+        Returns
+        -------
+        None.
+        """
+
+        #logger.debug('STAMP Test packet received: \n\n%s',
+        #             packet.show(dump=True))
+
+        ipv6_offset = 14  # Length of the Ethernet header
+
+        udp_length = 8
+
+        srh_length = 8 + 8*packet[ipv6_offset + SRH_OFFSET + HDR_EXT_LEN_SRH_OFFSET]
+        stamp_offset = ipv6_offset + 40 + srh_length + udp_length
+
+        #stamp_reply_payload_offset = ipv6_offset + 8 + len(stamp_session.return_sidlist)
+
+        ssid = struct.unpack('!H', packet[stamp_offset + libstamp.core.SSID_OFFSET : stamp_offset + libstamp.core.SSID_OFFSET + libstamp.core.SSID_LENGTH])[0]
+
+        # Get the STAMP Session by SSID
+        stamp_session = self.stamp_sessions.get(ssid, None)
+
+        # Validate the STAMP packet and drop the packet if it is not valid
+
+        logger.debug('Validating STAMP Session, SSID: %d', ssid)
+
+        # Drop STAMP packet if SSID does not correspond to any STAMP Session
+        if stamp_session is None:
+            logger.error('Received an invalid STAMP Test packet: '
+                         'Session with SSID %d does not exists',
+                         ssid)
+            return  # Drop the packet
+
+        # Drop STAMP packet if the Session is not running
+        if not stamp_session.is_running:
+            logger.error('Received an invalid STAMP Test packet: '
+                         'Session with SSID %d is not running',
+                         ssid)
+            return  # Drop the packet
+
+        # Sequence number depends on the Session Reflector Mode
+        if stamp_session.session_reflector_mode == \
+                SessionReflectorMode.SESSION_REFLECTOR_MODE_STATELESS.value:
+            # As explained in RFC 8762, in stateless mode:
+            #    The STAMP Session-Reflector does not maintain test state and
+            #    will use the value in the Sequence Number field in the
+            #    received packet as the value for the Sequence Number field in
+            #    the reflected packet.
+            pass
+        elif stamp_session.session_reflector_mode == \
+                SessionReflectorMode.SESSION_REFLECTOR_MODE_STATEFUL.value:
+            # As explained in RFC 8762, in stateful mode:
+            #    STAMP Session-Reflector maintains the test state, thus
+            #    allowing the Session-Sender to determine directionality of
+            #    loss using the combination of gaps recognized in the Session
+            #    Sender Sequence Number and Sequence Number fields,
+            #    respectively.
+            raise NotImplementedError  # Currently we don't support it
+
+        stamp_reply_payload_offset = ipv6_offset + 40 + 8 + 16 * len(stamp_session.return_sidlist) + 8 - 14
+
+        # If the packet is valid, generate the STAMP Test Reply packet
+        reply_packet = libstamp.core.generate_stamp_test_reply_packet_from_template(
+            template_packet=stamp_session.packet_template,
+            pseudo_hdr=stamp_session.pseudo_header,
+            stamp_test_packet=packet,
+            stamp_test_payload_offset=stamp_offset,
+            stamp_reply_payload_offset=stamp_reply_payload_offset,
+            #dst_ip=None,  # retrieved fromt the sidlist
+            #dst_udp_port=stamp_test_packet.src_udp_port,
+            sequence_number=None,
+            timestamp_format=stamp_session.timestamp_format,
+        )
+
+        # Send the reply packet to the Sender
+        #print('dst', stamp_session.return_sidlist[0])
+        libstamp.core.send_stamp_packet_raw(reply_packet, stamp_session.return_sidlist[0], self.reflector_socket.outs)
+
     def build_stamp_test_packets_sniffer(self):
         """
         Return a STAMP packets sniffer.
@@ -737,11 +894,17 @@ class STAMPSessionReflector:
                           iface=self.stamp_interfaces, filter=stamp_filter))
 
         # Create and return an AsyncSniffer
-        sniffer = AsyncSniffer(
-            iface=self.stamp_interfaces,
-            filter=stamp_filter,
-            store=False,
-            prn=self.stamp_test_packet_received)
+        if RAW_PROCESSING:
+            sniffer = AsyncSnifferRaw(
+                iface=self.stamp_interfaces[0],
+                filter=stamp_filter,
+                prn=self.stamp_test_packet_received_raw)
+        else:
+            sniffer = AsyncSniffer(
+                iface=self.stamp_interfaces,
+                filter=stamp_filter,
+                store=False,
+                prn=self.stamp_test_packet_received)
         return sniffer
 
 

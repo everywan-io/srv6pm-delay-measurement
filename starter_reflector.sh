@@ -3,7 +3,8 @@
 # Variables
 GRPC_STUBS_PATH="./srv6_delay_measurement/commons/protos/srv6pm/gen-py"
 VENV_ACTIVATE_SCRIPT="./.venv/bin/activate"
-REFLECTOR_FILENAME="./srv6_delay_measurement/reflector.py"
+#REFLECTOR_FILENAME="./srv6_delay_measurement/reflector.py"
+REFLECTOR_MODULE_NAME="srv6_delay_measurement.reflector"
 
 # Require root
 if [ "$EUID" -ne 0 ]
@@ -18,7 +19,8 @@ export PYTHONPATH="${PYTHONPATH}:${GRPC_STUBS_PATH}"
 source ${VENV_ACTIVATE_SCRIPT}
 
 # Start the reflector
-python ${REFLECTOR_FILENAME}
+#python ${REFLECTOR_FILENAME}
+python -m ${REFLECTOR_MODULE_NAME}
 
 # Deactivate virtual environment
 deactivate

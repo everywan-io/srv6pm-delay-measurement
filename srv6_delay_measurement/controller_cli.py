@@ -32,7 +32,7 @@ import argparse
 import logging
 import pprint
 
-from . import nb_controller_api
+from srv6_delay_measurement import nb_controller_api
 
 
 # Default command-line arguments

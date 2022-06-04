@@ -38,7 +38,7 @@ import queue
 import logging
 
 import common_pb2
-from .libs.libstamp import (
+from srv6_delay_measurement.libs.libstamp import (
     AuthenticationMode,
     DelayMeasurementMode,
     PacketLossType,
@@ -480,6 +480,9 @@ class STAMPSession:
         self.is_running = False
         # IP address to be used as source IPv6 address of the STAMP packets
         self.stamp_source_ipv6_address = stamp_source_ipv6_address
+
+        self.packet_template = None
+        self.pseudo_header = None
 
     def set_started(self):
         """

@@ -3,12 +3,12 @@
 # Variables
 GRPC_STUBS_PATH="./srv6_delay_measurement/commons/protos/srv6pm/gen-py"
 VENV_ACTIVATE_SCRIPT="./.venv/bin/activate"
-#SENDER_FILENAME="./srv6_delay_measurement/sender.py"
-SENDER_MODULE_NAME="srv6_delay_measurement.sender"
+#REFLECTOR_FILENAME="./srv6_delay_measurement/reflector.py"
+REFLECTOR_TEST_MODULE_NAME="srv6_delay_measurement.test.test_reflector"
 
 # Require root
 if [ "$EUID" -ne 0 ]
-  then echo "Sender must run as root"
+  then echo "Reflector must run as root"
   exit
 fi
 
@@ -18,9 +18,9 @@ export PYTHONPATH="${PYTHONPATH}:${GRPC_STUBS_PATH}"
 # Activate virtual environment
 source ${VENV_ACTIVATE_SCRIPT}
 
-# Start the sender
-#python ${SENDER_FILENAME}
-python ${SENDER_MODULE_NAME}
+# Start the reflector
+#python ${REFLECTOR_FILENAME}
+python -m ${REFLECTOR_TEST_MODULE_NAME}
 
 # Deactivate virtual environment
 deactivate
