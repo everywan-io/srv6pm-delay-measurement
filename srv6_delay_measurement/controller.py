@@ -1320,9 +1320,15 @@ class Controller:
         return ssid
 
     def fetch_stamp_results_polling(self, ssid, tenantid='1'):
-        stamp_session = self.storage.get_stamp_session(
-            ssid=ssid, tenantid=tenantid)
-        while stamp_session is not None and stamp_session.is_running:
+        while True:
+            stamp_session = self.storage.get_stamp_session(
+                ssid=ssid, tenantid=tenantid)
+            if stamp_session is None or not stamp_session.is_running:
+                logger.info(
+                    'Stopping fetch result cycle for STAMP Session %s, '
+                    'tenantid %s', ssid, tenantid
+                )
+                break
             logger.info(
                 'Fetching results for STAMP Session %s, tenantid %s',
                 ssid, tenantid
