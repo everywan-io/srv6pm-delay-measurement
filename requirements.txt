@@ -1,4 +1,4 @@
-astropy==4.1
+astropy==5.1
 grpcio==1.41.0
 grpcio-tools==1.41.0
 netifaces==0.11.0
