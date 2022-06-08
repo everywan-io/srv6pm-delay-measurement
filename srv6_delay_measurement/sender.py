@@ -101,7 +101,7 @@ logging.basicConfig(
 # Get the root logger
 logger = logging.getLogger()
 
-RAW_PROCESSING = True
+RAW_PROCESSING = False
 
 
 class STAMPSessionSender:

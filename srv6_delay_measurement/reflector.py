@@ -102,7 +102,7 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 
-RAW_PROCESSING = True
+RAW_PROCESSING = False
 
 
 class STAMPSessionReflector:
