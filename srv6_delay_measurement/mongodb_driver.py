@@ -145,26 +145,26 @@ class MongoDBDriver:
             db = client.EveryWan
             # Get the STAMP sessions collection
             stamp_sessions = db.stamp_sessions
-            # Decrease session count for Sender and Reflectors
-            stamp_nodes = db.stamp_nodes
-            # Build the query
-            query = {'ssid': ssid, 'tenantid': tenantid}
-            stamp_session = stamp_sessions.find_one(query)
-            query = {
-                'node_id': stamp_session['sender_id'], 'tenantid': tenantid}
-            # Build the update
-            update = {'$inc': {'sessions_count': -1}}
-            # Decrease the sessions count
-            stamp_nodes.find_one_and_update(
-                query, update)
-            # Build the query
-            query = {
-                'node_id': stamp_session['reflector_id'], 'tenantid': tenantid}
-            # Build the update
-            update = {'$inc': {'sessions_count': -1}}
-            # Decrease the sessions count
-            stamp_nodes.find_one_and_update(
-                query, update)
+            # # Decrease session count for Sender and Reflectors
+            # stamp_nodes = db.stamp_nodes
+            # # Build the query
+            # query = {'ssid': ssid, 'tenantid': tenantid}
+            # stamp_session = stamp_sessions.find_one(query)
+            # query = {
+            #     'node_id': stamp_session['sender_id'], 'tenantid': tenantid}
+            # # Build the update
+            # update = {'$inc': {'sessions_count': -1}}
+            # # Decrease the sessions count
+            # stamp_nodes.find_one_and_update(
+            #     query, update)
+            # # Build the query
+            # query = {
+            #     'node_id': stamp_session['reflector_id'], 'tenantid': tenantid}
+            # # Build the update
+            # update = {'$inc': {'sessions_count': -1}}
+            # # Decrease the sessions count
+            # stamp_nodes.find_one_and_update(
+            #     query, update)
             # Delete the STAMP session from the collection
             success = stamp_sessions.delete_one(session).deleted_count == 1
             if success:

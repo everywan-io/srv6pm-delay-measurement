@@ -552,7 +552,7 @@ class Controller:
             logger.error('STAMP node not found')
             raise NodeIdNotFoundError
 
-        if node.sessions_count != 0:
+        if node.sessions_count <= 0:
             raise STAMPSessionsExistError
 
         if node.is_sender_initialized:
