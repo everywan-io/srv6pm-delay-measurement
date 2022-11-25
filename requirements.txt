@@ -1,8 +1,8 @@
 astropy==5.1
-grpcio==1.41.0
-grpcio-tools==1.41.0
+grpcio==1.50.0
+grpcio-tools==1.50.0
 netifaces==0.11.0
 numpy==1.22.4
-protobuf==3.18.0
+protobuf==4.21.9
 scapy==2.4.4
 six==1.14.0
