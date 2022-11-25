@@ -35,6 +35,7 @@ import logging
 import netifaces
 import os
 import socket
+import struct
 import time
 
 import grpc
@@ -72,6 +73,8 @@ from srv6_delay_measurement.utils import (
     ROUTING_HEADER_PROTOCOL_NUMBER,
     UDP_DEST_PORT_FIELD,
     UDP_PROTOCOL_NUMBER,
+    SRH_OFFSET,
+    HDR_EXT_LEN_SRH_OFFSET,
     STAMPSenderSession,
     grpc_to_py_resolve_defaults,
     py_to_grpc
@@ -301,43 +304,59 @@ class STAMPSessionSender:
                          ssid)
             return  # Drop the packet
 
-        # Sequence number depends on the Session Reflector Mode
-        if stamp_session.session_reflector_mode == \
-                SessionReflectorMode.SESSION_REFLECTOR_MODE_STATELESS.value:
-            # As explained in RFC 8762, in stateless mode:
-            #    The STAMP Session-Reflector does not maintain test state and
-            #    will use the value in the Sequence Number field in the
-            #    received packet as the value for the Sequence Number field in
-            #    the reflected packet.
-            pass
-        elif stamp_session.session_reflector_mode == \
-                SessionReflectorMode.SESSION_REFLECTOR_MODE_STATEFUL.value:
-            # As explained in RFC 8762, in stateful mode:
-            #    STAMP Session-Reflector maintains the test state, thus
-            #    allowing the Session-Sender to determine directionality of
-            #    loss using the combination of gaps recognized in the Session
-            #    Sender Sequence Number and Sequence Number fields,
-            #    respectively.
-            raise NotImplementedError  # Currently we don't support it
+        t3 = struct.unpack('!2I', packet[stamp_offset + libstamp.core.TIMESTAMP_OFFSET : stamp_offset + libstamp.core.TIMESTAMP_OFFSET + libstamp.core.TIMESTAMP_LENGTH])[0]
+        t2 = struct.unpack('!2I', packet[stamp_offset + libstamp.core.RECEIVE_TIMESTAMP_OFFSET : stamp_offset + libstamp.core.RECEIVE_TIMESTAMP_OFFSET + libstamp.core.RECEIVE_TIMESTAMP_LENGTH])[0]
+        t1 = struct.unpack('!2I', packet[stamp_offset + libstamp.core.SENDER_INFORMATION_OFFSET + libstamp.core.SEQUENCE_NUMBER_LENGTH : stamp_offset + libstamp.core.SENDER_INFORMATION_OFFSET + libstamp.core.SEQUENCE_NUMBER_LENGTH + libstamp.core.RECEIVE_TIMESTAMP_LENGTH])[0]
 
-        stamp_reply_payload_offset = ipv6_offset + 40 + 8 + 16 * len(stamp_session.return_sidlist) + 8 - 14
+        # Take the STAMP Test Reply packet receive timestamp
+        t4 = libstamp.get_timestamp_unix()
+
+        # Append the timestamps to the results queue of the current STAMP
+        # Session
+        stamp_session.add_test_results(
+            test_pkt_tx_timestamp=t1,
+            reply_pkt_tx_timestamp=t3,
+            reply_pkt_rx_timestamp=t4,
+            test_pkt_rx_timestamp=t2
+        )
+
+        # Sequence number depends on the Session Reflector Mode
+        #if stamp_session.stamp_params.session_reflector_mode == \
+        #        SessionReflectorMode.SESSION_REFLECTOR_MODE_STATELESS.value:
+        #    # As explained in RFC 8762, in stateless mode:
+        #    #    The STAMP Session-Reflector does not maintain test state and
+        #    #    will use the value in the Sequence Number field in the
+        #    #    received packet as the value for the Sequence Number field in
+        #    #    the reflected packet.
+        #    pass
+        #elif stamp_session.stamp_params.session_reflector_mode == \
+        #        SessionReflectorMode.SESSION_REFLECTOR_MODE_STATEFUL.value:
+        #    # As explained in RFC 8762, in stateful mode:
+        #    #    STAMP Session-Reflector maintains the test state, thus
+        #    #    allowing the Session-Sender to determine directionality of
+        #    #    loss using the combination of gaps recognized in the Session
+        #    #    Sender Sequence Number and Sequence Number fields,
+        #    #    respectively.
+        #    raise NotImplementedError  # Currently we don't support it
+
+        #stamp_reply_payload_offset = ipv6_offset + 40 + 8 + 16 * len(stamp_session.return_sidlist) + 8 - 14
 
         # If the packet is valid, generate the STAMP Test Reply packet
-        reply_packet = libstamp.core.generate_stamp_test_reply_packet_from_template(
-            template_packet=stamp_session.packet_template,
-            pseudo_hdr=stamp_session.pseudo_header,
-            stamp_test_packet=packet,
-            stamp_test_payload_offset=stamp_offset,
-            stamp_reply_payload_offset=stamp_reply_payload_offset,
-            #dst_ip=None,  # retrieved fromt the sidlist
-            #dst_udp_port=stamp_test_packet.src_udp_port,
-            sequence_number=None,
-            timestamp_format=stamp_session.timestamp_format,
-        )
+        #reply_packet = libstamp.core.generate_stamp_test_reply_packet_from_template(
+        #    template_packet=stamp_session.packet_template,
+        #    pseudo_hdr=stamp_session.pseudo_header,
+        #    stamp_test_packet=packet,
+        #    stamp_test_payload_offset=stamp_offset,
+        #    stamp_reply_payload_offset=stamp_reply_payload_offset,
+        #    #dst_ip=None,  # retrieved fromt the sidlist
+        #    #dst_udp_port=stamp_test_packet.src_udp_port,
+        #    sequence_number=None,
+        #    timestamp_format=stamp_session.timestamp_format,
+        #)
 
         # Send the reply packet to the Sender
         #print('dst', stamp_session.return_sidlist[0])
-        libstamp.core.send_stamp_packet_raw(reply_packet, stamp_session.return_sidlist[0], self.reflector_socket.outs)
+        #libstamp.core.send_stamp_packet_raw(reply_packet, stamp_session.return_sidlist[0], self.reflector_socket.outs)
 
     def build_stamp_reply_packets_sniffer(self):
         """
@@ -770,7 +789,7 @@ class STAMPSessionSender:
         return reflector_ip, reflector_udp_port, auth_mode, key_chain, \
             timestamp_format, packet_loss_type, delay_measurement_mode
 
-    def start_stamp_session(self, ssid):
+    def start_stamp_session(self, ssid, only_collector=True):
         """
         Start an existing STAMP Session.
 
@@ -831,7 +850,8 @@ class STAMPSessionSender:
         # Start the sending thread
         logger.info('Starting sending thread')
         session.stop_flag.clear()
-        session.sending_thread.start()
+        if not only_collector:
+            session.sending_thread.start()
 
         # Set the flag "started"
         session.set_started()
@@ -1326,6 +1346,16 @@ class STAMPSessionSenderServicer(
         # Set status code and return
         logger.debug('StampResults RPC completed')
         reply.status = common_pb2.StatusCode.STATUS_CODE_SUCCESS
+        return reply
+
+    def GetResultsCounter(self, request, context):
+
+        num_results = len(self.stamp_session_sender.get_stamp_session_results(ssid=request.ssid))
+
+        reply = stamp_sender_pb2.StampResultsCountersReply(status=common_pb2.StatusCode.STATUS_CODE_SUCCESS, num_results=num_results)
+        import queue
+        self.stamp_session_sender.stamp_sessions.get(request.ssid).test_results = queue.Queue()
+
         return reply
 
 

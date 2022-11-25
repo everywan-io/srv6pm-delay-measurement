@@ -62,6 +62,7 @@ service STAMPSessionSenderService {
   rpc DestroyStampSession (DestroyStampSenderSessionRequest)
                            returns (DestroyStampSenderSessionReply) {}
 
+  rpc GetResultsCounter (StampResultsCountersRequest) returns (StampResultsCountersReply) {}
 }
 
 // CreateStampSenderSessionRequest carries the parameters required to create a
@@ -297,4 +298,14 @@ message ResetStampSenderReply {
   // description: a description of the result of the operation
   string description = 2;
 
+}
+
+message StampResultsCountersReply {
+  StatusCode status = 1;
+  uint32 num_results = 2;
+}
+
+
+message StampResultsCountersRequest {
+  uint32 ssid = 1;
 }
